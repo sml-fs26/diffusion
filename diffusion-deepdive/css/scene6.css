@@ -1,0 +1,202 @@
+/* Scene 6 — Generate.
+ * Two-column split. Left: 2D scatter. Right: 6 MNIST snapshots, top-to-bottom.
+ * Below: GENERATE / RE-ROLL controls + closing caption. */
+
+.scene[data-scene="6"] {
+  padding: 24px 48px 18px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.s6-layout {
+  flex: 1 1 auto;
+  align-items: stretch;
+  min-height: 0;
+}
+
+/* ===== LEFT — 2D scatter ============================================== */
+
+.s6-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.s6-pane-label {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+  flex: 0 0 auto;
+}
+
+.s6-2d-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  max-width: 100%;
+  align-self: start;
+  max-height: calc(100vh - 280px);
+}
+
+.s6-2d-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.s6-frame-axis {
+  stroke: var(--rule);
+  stroke-width: 0.01;
+  stroke-dasharray: 0.04 0.04;
+}
+
+svg .s6-2d-pt {
+  fill-opacity: 0.85;
+  stroke: none;
+  stroke-width: 0;
+}
+
+.s6-pane-caption {
+  margin-top: 8px;
+  font-size: 12.5px;
+  font-style: italic;
+  color: var(--muted);
+  flex: 0 0 auto;
+  max-width: none;
+}
+
+/* ----- warming-up overlay ----- */
+
+.s6-warm-overlay {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: opacity var(--t-med);
+}
+.s6-warm-overlay.s6-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.s6-warm-card {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 14px 18px;
+  text-align: center;
+  box-shadow: var(--shadow-soft);
+}
+.s6-warm-title {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--ink);
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+.s6-warm-sub {
+  font-size: 12.5px;
+}
+
+/* ===== RIGHT — MNIST strip ============================================= */
+
+.s6-right {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.s6-mnist-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.s6-mnist-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.s6-mnist-canvas {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+}
+
+.s6-mnist-tlabel {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Controls (centered below both panes) =========================== */
+
+.s6-ctrls {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  margin: 14px 0 4px 0;
+  flex: 0 0 auto;
+}
+
+.s6-gen-btn {
+  min-width: 120px;
+  font-size: 14.5px;
+  padding: 10px 24px;
+}
+
+.s6-roll-btn {
+  font-size: 13.5px;
+}
+
+.s6-seed-pill {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 6px;
+}
+
+/* ===== Closing caption ================================================ */
+
+.s6-closing {
+  text-align: center;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 6px 0 2px 0;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1100px) {
+  .s6-2d-wrap {
+    max-height: 60vw;
+  }
+  .s6-mnist-strip {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .s6-mnist-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+}

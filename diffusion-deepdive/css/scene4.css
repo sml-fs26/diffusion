@@ -1,0 +1,234 @@
+/* Scene 4 — Reverse, wishful thinking. The pedagogical climax.
+   Single-column hero, max 960px, centred. */
+
+.scene[data-scene="4"] { padding: 16px 24px 16px 24px; overflow: auto; }
+
+.scene-s4 {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.s4-hero {
+  width: 100%;
+  max-width: 960px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 16px 8px;
+}
+
+.s4-eyebrow {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.s4-formula {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 16px 22px 18px 22px;
+  text-align: center;
+}
+.s4-formula .katex-display { margin: 0; font-size: 1.0em; }
+.s4-formula .katex { line-height: 1.4; }
+
+.s4-subcap {
+  margin: 0;
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  color: var(--muted);
+  font-size: 15px;
+  text-align: center;
+  max-width: none;
+}
+.s4-subcap em { font-style: italic; }
+
+.s4-btn-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  width: 100%;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.s4-bigbtn {
+  appearance: none;
+  font: inherit;
+  background: var(--panel);
+  border: 2px solid var(--rule);
+  border-radius: 6px;
+  padding: 14px 18px;
+  width: 280px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all var(--t-fast);
+  flex: 0 0 auto;
+}
+.s4-bigbtn:hover:not(:disabled) {
+  background: var(--panel-hover);
+  transform: translateY(-1px);
+}
+.s4-bigbtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.s4-bigbtn-label {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+.s4-bigbtn-sub {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Per-cluster button colors — pull color from the cluster class onto border + label. */
+.s4-btn-random  { border-color: var(--c2); }
+.s4-btn-random  .s4-bigbtn-label { color: var(--c2); }
+.s4-btn-bookkept { border-color: var(--c1); }
+.s4-btn-bookkept .s4-bigbtn-label { color: var(--c1); }
+.s4-btn-predicted { border-color: var(--c5); }
+.s4-btn-predicted .s4-bigbtn-label { color: var(--c5); }
+
+/* Pulse to indicate which button the step engine just triggered. */
+.s4-arm-pulse {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px currentColor;
+  animation: s4-pulse 1200ms ease-out;
+}
+.s4-btn-random.s4-arm-pulse { color: var(--c2); }
+.s4-btn-bookkept.s4-arm-pulse { color: var(--c1); }
+@keyframes s4-pulse {
+  0%   { box-shadow: 0 0 0 2px var(--bg), 0 0 0 0 currentColor; }
+  60%  { box-shadow: 0 0 0 2px var(--bg), 0 0 0 6px transparent; }
+  100% { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px transparent; }
+}
+
+/* Result panel: 2D pane (square) + MNIST pane side by side. */
+.s4-result {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.s4-pane {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 12px;
+  flex: 0 0 auto;
+}
+
+.s4-pane-2d {
+  width: 384px;
+}
+.s4-svg-2d {
+  width: 360px;
+  height: 360px;
+  display: block;
+  background: var(--bg);
+  border-radius: 2px;
+}
+
+.s4-pane-mn {
+  width: 200px;
+}
+.s4-mnist-canvas {
+  width: 176px;
+  height: 176px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.s4-pane-cap {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Verdict + stats. */
+.s4-verdict {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-size: 19px;
+  margin-top: 4px;
+  min-height: 22px;
+  text-align: center;
+}
+
+.s4-stats {
+  display: flex;
+  gap: 28px;
+  font-size: 13px;
+  color: var(--muted);
+  font-family: "SF Mono", "Menlo", monospace;
+  min-height: 18px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.s4-stats .mono { font-family: inherit; color: var(--ink-soft); }
+
+/* Closing line — appears at cursor 2. */
+.s4-closing {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  color: var(--muted);
+  font-size: 16px;
+  text-align: center;
+  margin-top: 6px;
+  opacity: 0;
+  transition: opacity var(--t-med);
+  font-style: italic;
+}
+.s4-closing.visible { opacity: 1; }
+
+/* Final-state circle stroke for crispness on light bg. */
+.s4-svg-2d circle.point {
+  stroke: var(--bg);
+  stroke-width: 0.04;
+}
+
+/* Tighten layout on shorter viewports so everything is in-frame. */
+@media (max-height: 820px) {
+  .s4-formula { padding: 12px 18px; }
+  .s4-formula .katex-display { font-size: 0.92em; }
+  .s4-bigbtn { height: 64px; width: 240px; padding: 8px 14px; }
+  .s4-bigbtn-label { font-size: 15px; }
+  .s4-bigbtn-sub { font-size: 11px; }
+  .s4-svg-2d { width: 300px; height: 300px; }
+  .s4-pane-2d { width: 324px; }
+  .s4-pane-mn { width: 180px; }
+  .s4-mnist-canvas { width: 156px; height: 156px; }
+  .s4-hero { gap: 8px; }
+  .s4-pane { padding: 8px; }
+  .s4-eyebrow { font-size: 12px; }
+}
+
+@media (max-width: 980px) {
+  .s4-result { flex-direction: column; align-items: center; }
+}

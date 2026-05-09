@@ -1,0 +1,253 @@
+/* Scene 1 — One forward step.
+   Two-column layout: left = stacked viz panes (2D + MNIST),
+                      right = heading, formula, coefficient panel, β-slider, tail. */
+
+.scene-s1 .scene-layout {
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+}
+
+/* ---- Left: stacked viz panes ------------------------------------------- */
+
+.s1-viz-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.s1-top-pane {
+  flex: 1 1 auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 240px;
+}
+
+.s1-bot-pane {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.s1-pane-label {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+  padding: 4px 12px 0;
+}
+
+/* SVG fills the rest of the top pane */
+.s1-top-pane .s1-svg2d {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.s1-svg2d .s1-grid-line {
+  stroke: var(--grid-line);
+  stroke-width: 0.5;
+  fill: none;
+}
+
+.s1-svg2d circle.point.cluster-1 {
+  fill: var(--c1);
+  stroke: var(--bg);
+  stroke-width: 0.15;
+}
+
+/* MNIST canvas: fixed dimensions to defeat flex stretching. */
+.s1-bot-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  padding: 0 12px;
+}
+
+.s1-mnist-canvas {
+  width: 112px;
+  height: 112px;
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  background: #000;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+
+.s1-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.s1-selector-label {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.s1-digit-select {
+  font: inherit;
+  font-size: 13px;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.s1-digit-select:hover { border-color: var(--ink); }
+
+/* ---- Right: text column ----------------------------------------------- */
+
+.s1-text {
+  padding-left: 8px;
+  justify-content: flex-start;
+  padding-top: 8px;
+  overflow: hidden;
+}
+
+.s1-step-pill {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.s1-text h2 {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(22px, 2vw, 28px);
+  line-height: 1.2;
+  margin-bottom: 12px;
+}
+
+.s1-formula {
+  margin: 8px 0 6px 0;
+}
+
+.s1-formula-caption {
+  text-align: center;
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  font-size: 13px;
+  margin-bottom: 14px;
+  color: var(--muted);
+}
+.s1-formula-caption em { font-style: italic; }
+
+/* KaTeX class hooks for the highlight on the fade / noise term. */
+.s1-hl-fade  { color: var(--c1); }
+.s1-hl-noise { color: var(--c2); }
+
+/* ---- Coefficient panel ----------------------------------------------- */
+
+.s1-coef-panel {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+  padding: 10px 14px;
+  margin: 8px 0 14px 0;
+  font-family: "SF Mono", "Menlo", monospace;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.s1-coef-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  border-bottom: 1px dotted var(--rule);
+}
+.s1-coef-row:last-child { border-bottom: none; }
+
+.s1-coef-name {
+  color: var(--ink-soft);
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  font-size: 13.5px;
+}
+.s1-coef-name sub { font-size: 0.8em; }
+
+.s1-coef-fade  { color: var(--c1); }
+.s1-coef-noise { color: var(--c2); }
+
+.s1-coef-value { color: var(--ink); }
+
+/* ---- β slider widget -------------------------------------------------- */
+
+.s1-slider-wrap {
+  margin: 8px 0 14px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+}
+
+.s1-slider-label {
+  display: block;
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.s1-slider-label sub { font-size: 0.8em; }
+
+.s1-slider {
+  width: 100%;
+  margin: 4px 0 6px 0;
+  accent-color: var(--ink);
+}
+.s1-slider:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.s1-slider-stops {
+  display: flex;
+  justify-content: space-between;
+  font-family: "SF Mono", "Menlo", monospace;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 6px;
+}
+.s1-slider-stop { flex: 1 1 auto; text-align: center; }
+.s1-slider-stop:first-child { text-align: left; }
+.s1-slider-stop:last-child { text-align: right; }
+
+.s1-slider-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 0;
+}
+
+/* ---- tail line --------------------------------------------------------- */
+
+.s1-tail {
+  margin: 8px 0 0 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: normal;
+}
+.s1-tail em { font-style: italic; color: var(--ink); }
+
+/* ---- Responsive -------------------------------------------------------- */
+
+@media (max-height: 760px) {
+  .s1-mnist-canvas { width: 96px; height: 96px; }
+}

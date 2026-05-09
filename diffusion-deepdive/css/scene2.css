@@ -1,0 +1,307 @@
+/* Scene 2 — All the way to chaos.
+   Two-column layout: left = stacked viz panes (2D + MNIST),
+                      right = heading, time panel, controls, tail. */
+
+.scene-s2 .scene-layout {
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+}
+
+/* ---- Left: stacked viz panes ------------------------------------------- */
+
+.s2-viz-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.s2-top-pane {
+  flex: 1 1 auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 240px;
+}
+
+.s2-bot-pane {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.s2-pane-label {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+  padding: 4px 12px 0;
+}
+
+.s2-top-pane .s2-svg2d {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.s2-svg2d .s2-grid-line {
+  stroke: var(--grid-line);
+  stroke-width: 0.5;
+  fill: none;
+}
+
+.s2-svg2d circle.point.cluster-1 {
+  fill: var(--c1);
+  stroke: var(--bg);
+  stroke-width: 0.15;
+}
+
+/* MNIST + histogram + selector on a single row */
+.s2-bot-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  padding: 0 12px;
+}
+
+.s2-mnist-canvas {
+  width: 112px;
+  height: 112px;
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  background: #000;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+}
+
+.s2-hist-wrap {
+  display: none;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 4px;
+}
+.s2-hist-wrap.visible { display: flex; }
+.s2-hist-label {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.s2-hist-canvas {
+  width: 160px;
+  height: 80px;
+  flex: 0 0 auto;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--panel);
+}
+
+.s2-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.s2-selector-label {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.s2-digit-select {
+  font: inherit;
+  font-size: 13px;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.s2-digit-select:hover { border-color: var(--ink); }
+
+/* ---- Right: text column ----------------------------------------------- */
+
+.s2-text {
+  padding-left: 8px;
+  justify-content: flex-start;
+  padding-top: 8px;
+  overflow: hidden;
+}
+
+.s2-step-pill {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.s2-text h2 {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(22px, 2vw, 28px);
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.s2-tagline {
+  color: var(--muted);
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-size: 14px;
+  margin-bottom: 14px;
+}
+.s2-tagline em { font-style: italic; }
+
+/* ---- Time panel: counter + chart -------------------------------------- */
+
+.s2-time-panel {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.s2-counter {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: "SF Mono", "Menlo", monospace;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 8px;
+}
+.s2-counter-label {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 14px;
+}
+.s2-counter-value {
+  font-size: 28px;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+.s2-counter-sep {
+  color: var(--muted);
+  margin: 0 4px;
+}
+
+.s2-chart-wrap {
+  width: 100%;
+  height: 120px;
+}
+.s2-chart-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.s2-chart-bg {
+  fill: var(--bg);
+  stroke: none;
+  opacity: 0.5;
+}
+
+.s2-chart-beta,
+.s2-chart-alpha {
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.s2-chart-cursor-line {
+  stroke-width: 1.2;
+  opacity: 0.85;
+}
+.s2-chart-dot {
+  stroke: var(--bg);
+  stroke-width: 0.8;
+}
+
+.s2-chart-y-l, .s2-chart-y-r, .s2-chart-x-l {
+  font-family: "SF Mono", "Menlo", monospace;
+  font-size: 9px;
+  fill: var(--muted);
+}
+
+.s2-chart-legend {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  font-size: 11px;
+  fill: currentColor;
+}
+.s2-chart-legend.cluster-1 { fill: var(--c1); }
+.s2-chart-legend.cluster-2 { fill: var(--c2); }
+
+/* ---- Controls --------------------------------------------------------- */
+
+.s2-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.s2-play-btn {
+  flex: 0 0 auto;
+  min-width: 86px;
+}
+
+.s2-scrubber {
+  flex: 1 1 auto;
+  accent-color: var(--ink);
+}
+.s2-scrubber:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- Histogram toggle ------------------------------------------------- */
+
+.s2-hist-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 8px;
+}
+.s2-hist-toggle.disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.s2-hist-toggle input { accent-color: var(--ink); }
+
+/* ---- Tail line --------------------------------------------------------- */
+
+.s2-tail {
+  margin: 6px 0 0 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+}
+.s2-tail em { font-style: italic; color: var(--ink); }
+.s2-tail strong { font-weight: 600; color: var(--ink); }
+.s2-tail .mono { font-family: "SF Mono", "Menlo", monospace; font-size: 0.95em; }
+
+/* ---- Responsive -------------------------------------------------------- */
+
+@media (max-height: 760px) {
+  .s2-mnist-canvas { width: 96px; height: 96px; }
+  .s2-counter-value { font-size: 24px; }
+  .s2-chart-wrap { height: 100px; }
+}

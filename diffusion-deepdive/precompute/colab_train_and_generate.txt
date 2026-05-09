@@ -1,0 +1,304 @@
+================================================================
+COLAB CELL — train MNIST UNet + generate reverse trajectories
+================================================================
+
+Instructions
+------------
+1. New Colab notebook → Runtime → Change runtime type → GPU (T4 is fine).
+2. Paste EVERYTHING below the "PASTE BELOW" line into a single cell. Run.
+3. Total wall time on a T4: roughly 2–4 min training + 30 s sampling.
+4. The cell ends with `files.download(...)` — your browser will pop the
+   `unet_trajectories.json` file (~5–10 MB, depending on N_TRAJECTORIES).
+5. Move that file to:
+       diffusion-deepdive/precompute/_artifacts/unet_trajectories.json
+   then locally run:
+       cd diffusion-deepdive/precompute
+       python3 build_data.py
+   That's it — `data/datasets.js` regenerates with your samples.
+
+What the cell does
+------------------
+- Loads MNIST (auto-downloads on Colab).
+- Builds a 2-level UNet with 32/64/128 channels (~10× the CPU model). With
+  a GPU this trains in 2–4 min for 30 k steps; you'd never run this size on
+  the local CPU.
+- Trains with the SAME DDPM schedule the rest of the viz uses: T=200, linear
+  β from 1e-4 to 0.02. Don't change those — they're load-bearing across the
+  build.
+- Generates N_TRAJECTORIES (default 32) reverse trajectories, snapshotting
+  every 10 steps (21 snapshots from t=200 to t=0). Clamps each step to
+  [-1.5, 1.5] (standard production trick, mirrors local build).
+- Saves and downloads `unet_trajectories.json`.
+
+Switching to FashionMNIST
+-------------------------
+Replace `datasets.MNIST` with `datasets.FashionMNIST` in the `load_data()`
+function. Nothing else changes. (Comment marked DATASET below.)
+
+Tweaks that are safe to change
+------------------------------
+- N_TRAJECTORIES (more = more re-roll variety in the viz, larger file)
+- N_STEPS (more = better digits; 30k is already good for this size)
+- CHANNELS  (32/64/128 is comfortable on T4; bigger = better but slower)
+
+Tweaks that are NOT safe to change without also changing the viz
+----------------------------------------------------------------
+- T (must stay 200; the schedule is hard-coded across the rest of the viz)
+- BETA_MIN / BETA_MAX (must stay 1e-4 / 0.02)
+- SNAPSHOT_STRIDE (must stay 10; scene 6 picks snapshots from this grid)
+- Output JSON shape (build_data.py expects this exact structure)
+
+
+================== PASTE BELOW ==================
+
+# ----- Colab cell -----
+import math, json, time, os
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torchvision import datasets, transforms
+from google.colab import files
+
+# ---------- Hyperparameters --------------------------------------------
+SEED            = 42
+T               = 200          # diffusion steps; load-bearing — don't change
+BETA_MIN        = 1e-4         # load-bearing — don't change
+BETA_MAX        = 0.02         # load-bearing — don't change
+
+TIME_DIM        = 32
+TIME_EMB_DIM    = TIME_DIM * 4 # 128
+
+# Channel widths — wider than the CPU model. Free GPU can handle this.
+C0, C1, C2      = 32, 64, 128
+
+LR              = 2e-4
+BATCH           = 128
+N_STEPS         = 30_000       # ~3 min on T4
+
+N_TRAJECTORIES  = 32
+SNAPSHOT_STRIDE = 10           # snapshots at t = 200, 190, …, 10, 0  (21 total) — load-bearing
+CLIP_RANGE      = (-1.5, 1.5)  # production stability trick; mirrors local build
+SEED_BASE       = 1000
+
+DATASET = 'mnist'              # DATASET — change to 'fashionmnist' for FashionMNIST
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print('device =', device)
+torch.manual_seed(SEED); np.random.seed(SEED)
+
+
+# ---------- Model ------------------------------------------------------
+class TimeEmbedding(nn.Module):
+    def __init__(self, dim, max_period=10_000.0):
+        super().__init__()
+        self.dim, self.max_period = dim, max_period
+        self.mlp = nn.Sequential(
+            nn.Linear(dim, dim * 4), nn.SiLU(), nn.Linear(dim * 4, dim * 4))
+    def forward(self, t):
+        half = self.dim // 2
+        freqs = torch.exp(-math.log(self.max_period)
+                          * torch.arange(half, dtype=torch.float32, device=t.device) / half)
+        args = t.float()[:, None] * freqs[None, :]
+        emb = torch.cat([torch.sin(args), torch.cos(args)], dim=1)
+        return self.mlp(emb)
+
+def _gn(c, n=8):
+    g = min(n, c)
+    while c % g != 0: g -= 1
+    return nn.GroupNorm(g, c)
+
+class ResBlock(nn.Module):
+    def __init__(self, in_c, out_c, t_dim):
+        super().__init__()
+        self.norm1 = _gn(in_c);  self.conv1 = nn.Conv2d(in_c, out_c, 3, padding=1)
+        self.t_proj = nn.Linear(t_dim, out_c)
+        self.norm2 = _gn(out_c); self.conv2 = nn.Conv2d(out_c, out_c, 3, padding=1)
+        self.skip  = nn.Conv2d(in_c, out_c, 1) if in_c != out_c else nn.Identity()
+    def forward(self, x, t_emb):
+        h = self.conv1(F.silu(self.norm1(x)))
+        h = h + self.t_proj(F.silu(t_emb))[:, :, None, None]
+        h = self.conv2(F.silu(self.norm2(h)))
+        return h + self.skip(x)
+
+class TinyUNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        emb = TIME_EMB_DIM
+        self.time_emb = TimeEmbedding(TIME_DIM)
+        self.in_conv  = nn.Conv2d(1, C0, 3, padding=1)
+        self.d1 = ResBlock(C0, C1, emb)
+        self.d2 = ResBlock(C1, C2, emb)
+        self.b1 = ResBlock(C2, C2, emb)
+        self.u2 = ResBlock(C2 + C2, C1, emb)
+        self.u1 = ResBlock(C1 + C1, C0, emb)
+        self.out_norm = _gn(C0)
+        self.out_conv = nn.Conv2d(C0, 1, 3, padding=1)
+    def forward(self, x, t):
+        emb = self.time_emb(t)
+        h  = self.in_conv(x)
+        s1 = self.d1(h, emb)
+        h2 = F.avg_pool2d(s1, 2)
+        s2 = self.d2(h2, emb)
+        h3 = F.avg_pool2d(s2, 2)
+        b  = self.b1(h3, emb)
+        u2 = F.interpolate(b, scale_factor=2, mode='nearest')
+        u2 = self.u2(torch.cat([u2, s2], dim=1), emb)
+        u1 = F.interpolate(u2, scale_factor=2, mode='nearest')
+        u1 = self.u1(torch.cat([u1, s1], dim=1), emb)
+        return self.out_conv(F.silu(self.out_norm(u1)))
+
+
+# ---------- Data -------------------------------------------------------
+def load_data():
+    tf = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Lambda(lambda x: x * 2 - 1),  # → [-1, 1]
+    ])
+    if DATASET == 'fashionmnist':
+        ds = datasets.FashionMNIST('./_data', train=True, download=True, transform=tf)
+    else:
+        ds = datasets.MNIST('./_data', train=True, download=True, transform=tf)
+    n = len(ds)
+    print(f'{DATASET} train size = {n}')
+    all_x = torch.empty((n, 1, 28, 28), dtype=torch.float32)
+    for i in range(n):
+        img, _ = ds[i]; all_x[i] = img
+    return all_x
+
+
+# ---------- Schedule ---------------------------------------------------
+def make_schedule(device):
+    t = torch.arange(T, dtype=torch.float64, device=device)
+    betas = BETA_MIN + (BETA_MAX - BETA_MIN) * t / (T - 1)
+    alphas = 1.0 - betas
+    alpha_bars = torch.cumprod(alphas, 0)
+    return betas.float(), alphas.float(), alpha_bars.float()
+
+
+# ---------- Train ------------------------------------------------------
+all_x = load_data().to(device)
+model = TinyUNet().to(device)
+n_params = sum(p.numel() for p in model.parameters())
+print(f'params = {n_params:,}')
+opt = torch.optim.Adam(model.parameters(), lr=LR)
+betas, alphas, alpha_bars = make_schedule(device)
+sqrt_ab = torch.sqrt(alpha_bars)
+sqrt_one_minus_ab = torch.sqrt(1.0 - alpha_bars)
+g = torch.Generator(device=device).manual_seed(SEED) if device.type == 'cuda' \
+    else torch.Generator(device='cpu').manual_seed(SEED)
+
+losses = []
+t0 = time.time()
+model.train()
+for step in range(1, N_STEPS + 1):
+    # On CUDA, generator must live on CUDA for randint with generator=g.
+    # Easiest: use torch.randint on the right device without generator (we
+    # already seeded torch globally above).
+    idx = torch.randint(0, all_x.shape[0], (BATCH,), device=device)
+    x0  = all_x[idx]
+    tt  = torch.randint(0, T, (BATCH,), device=device)
+    eps = torch.randn(BATCH, 1, 28, 28, device=device)
+
+    sa  = sqrt_ab[tt][:, None, None, None]
+    soa = sqrt_one_minus_ab[tt][:, None, None, None]
+    x_t = sa * x0 + soa * eps
+
+    eps_pred = model(x_t, tt)
+    loss = F.mse_loss(eps_pred, eps)
+    opt.zero_grad(); loss.backward(); opt.step()
+
+    losses.append(float(loss.item()))
+    if step % 1000 == 0 or step == 1:
+        recent = float(np.mean(losses[-1000:]))
+        elapsed = time.time() - t0
+        rate = step / elapsed
+        eta = (N_STEPS - step) / rate
+        print(f'  step {step:6d}/{N_STEPS}  loss={recent:.4f}  '
+              f'{rate:.1f} step/s  eta={eta/60:.1f} min')
+
+print(f'done. first1k={np.mean(losses[:1000]):.4f}  last1k={np.mean(losses[-1000:]):.4f}  '
+      f'time={(time.time()-t0)/60:.1f} min')
+
+
+# ---------- Generate trajectories --------------------------------------
+def snapshot_ts():
+    ts = list(range(T, -1, -SNAPSHOT_STRIDE))
+    if 0 not in ts: ts.append(0)
+    return ts
+
+@torch.no_grad()
+def reverse_one(model, seed, snap_ts):
+    g = torch.Generator(device=device).manual_seed(seed) if device.type == 'cuda' \
+        else torch.Generator(device='cpu').manual_seed(seed)
+    bb = betas; aa = alphas; ab = alpha_bars
+    x = torch.randn(1, 1, 28, 28, device=device, generator=g)
+    snaps = {}
+    if T in snap_ts:
+        snaps[T] = x.detach().cpu().numpy().reshape(-1).astype(np.float32).copy()
+    model.eval()
+    for t in reversed(range(T)):
+        ttv = torch.tensor([t], dtype=torch.long, device=device)
+        eps = model(x, ttv)
+        ab_t = ab[t]; a_t = aa[t]; b_t = bb[t]
+        coef = (1.0 - a_t) / torch.sqrt(1.0 - ab_t)
+        mean = (1.0 / torch.sqrt(a_t)) * (x - coef * eps)
+        if t > 0:
+            noise = torch.randn(x.shape, device=device, generator=g)
+            x = mean + torch.sqrt(b_t) * noise
+        else:
+            x = mean
+        if CLIP_RANGE is not None:
+            x = torch.clamp(x, CLIP_RANGE[0], CLIP_RANGE[1])
+        if t in snap_ts and t != T:
+            snaps[t] = x.detach().cpu().numpy().reshape(-1).astype(np.float32).copy()
+    return snaps
+
+snap_ts = snapshot_ts()
+print(f'snapshots/traj = {len(snap_ts)} (t = {snap_ts[:3]} … {snap_ts[-2:]})')
+
+trajs = []
+for i in range(N_TRAJECTORIES):
+    seed = SEED_BASE + i
+    sd = reverse_one(model, seed, snap_ts)
+    snaps_list = []
+    for t in snap_ts:
+        snaps_list.append({'t': int(t), 'pixels': sd[t].tolist()})
+    trajs.append({'seed': seed, 'snapshots': snaps_list})
+    last = np.array(snaps_list[-1]['pixels'])
+    print(f'  traj {i+1:2d}/{N_TRAJECTORIES} seed={seed}: '
+          f'x_0 mean={last.mean():+.3f} std={last.std():.3f}')
+
+
+# ---------- Save and download -----------------------------------------
+out = 'unet_trajectories.json'
+with open(out, 'w') as f:
+    json.dump(trajs, f)
+size_mb = os.path.getsize(out) / (1024 * 1024)
+print(f'\nwrote {out}  ({size_mb:.1f} MB)')
+
+# Optional preview: first 6 generated digits as a quick sanity check
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots(1, 6, figsize=(12, 2))
+for i in range(6):
+    arr = np.array(trajs[i]['snapshots'][-1]['pixels']).reshape(28, 28)
+    ax[i].imshow(np.clip((arr + 1) * 0.5, 0, 1), cmap='gray')
+    ax[i].set_title(f'seed {trajs[i]["seed"]}'); ax[i].axis('off')
+plt.show()
+
+files.download(out)
+# ----- end Colab cell -----
+
+================== END PASTE ==================
+
+
+After the file downloads, on your local machine
+------------------------------------------------
+    mv ~/Downloads/unet_trajectories.json \
+       /Users/carloscotrini/Documents/git_sml/diffusion/diffusion-deepdive/precompute/_artifacts/
+
+    cd /Users/carloscotrini/Documents/git_sml/diffusion/diffusion-deepdive/precompute
+    python3 build_data.py
+
+That's it. The viz will pick up the new (much better) trajectories
+automatically — no JS/HTML changes needed.

@@ -1,0 +1,304 @@
+/* Scene 5 — Train the oracle.
+ * Two-column split. Left: vector field over (x, y). Right: status, loss
+ * chart (log y), t-slider, and TRAIN/RESET. */
+
+.scene[data-scene="5"] {
+  padding: 28px 48px 24px;
+  overflow: hidden;
+}
+
+.s5-layout {
+  align-items: stretch;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ===== LEFT COLUMN — vector field ===================================== */
+
+.s5-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.s5-pane-label {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+  flex: 0 0 auto;
+}
+
+.s5-vf-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* Square: capped to vertical space so it doesn't push the column. */
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+  align-self: start;
+  width: 100%;
+  max-height: calc(100vh - 220px);
+}
+
+.s5-vf-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.s5-frame-axis {
+  stroke: var(--rule);
+  stroke-width: 0.005;
+  stroke-dasharray: 0.02 0.02;
+}
+
+svg .s5-data-pt {
+  fill-opacity: 0.4;
+  stroke: none;
+  stroke-width: 0;
+}
+
+.s5-field-arrow {
+  stroke-width: 0.012;
+  fill: none;
+  stroke-linecap: round;
+  opacity: 0.92;
+}
+
+.s5-arrow-head {
+  fill: var(--c5);
+  stroke: none;
+}
+
+/* ===== RIGHT COLUMN ==================================================== */
+
+.s5-right {
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  justify-content: flex-start;
+}
+
+.s5-step-pill {
+  margin: 0 0 2px 0;
+}
+
+.s5-right h2 {
+  margin: 0 0 6px 0;
+}
+
+.s5-subhead {
+  color: var(--ink-soft);
+  font-size: 14.5px;
+  margin: 0 0 8px 0;
+  max-width: none;
+}
+
+.s5-formula {
+  margin: 4px 0 8px 0;
+  padding: 12px 14px;
+}
+
+.s5-formula .katex {
+  font-size: 1.05em;
+}
+
+/* ----- status panel ----- */
+
+.s5-status {
+  display: flex;
+  flex-direction: row;
+  gap: 28px;
+  padding: 10px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+  margin: 0 0 4px 0;
+  flex: 0 0 auto;
+}
+
+.s5-status-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.s5-status-label {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.s5-status-val {
+  font-size: 15px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  min-width: 60px;
+  display: inline-block;
+}
+
+/* ----- loss chart ----- */
+
+.s5-chart-wrap {
+  width: 100%;
+  height: 160px;
+  flex: 0 0 auto;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 4px 8px 4px 4px;
+  margin: 0;
+}
+
+.s5-chart {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.s5-loss-path {
+  fill: none;
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.s5-axis-x text, .s5-axis-y text {
+  fill: var(--muted);
+  font-size: 10px;
+}
+.s5-axis-x line, .s5-axis-y line,
+.s5-axis-x path, .s5-axis-y path {
+  stroke: var(--rule);
+  shape-rendering: crispEdges;
+}
+
+/* ----- t-slider ----- */
+
+.s5-t-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0 4px 0;
+  flex: 0 0 auto;
+}
+
+.s5-t-caption {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.s5-t-slider {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  margin: 0;
+}
+
+.s5-t-slider::-webkit-slider-runnable-track {
+  height: 3px;
+  background: var(--rule);
+  border-radius: 2px;
+}
+.s5-t-slider::-moz-range-track {
+  height: 3px;
+  background: var(--rule);
+  border-radius: 2px;
+}
+
+.s5-t-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  margin-top: -5px;
+  border: 0;
+  cursor: pointer;
+}
+.s5-t-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 0;
+  cursor: pointer;
+}
+.s5-t-slider:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ----- training controls ----- */
+
+.s5-ctrls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 6px 0 0 0;
+  flex: 0 0 auto;
+}
+
+.s5-train-btn {
+  min-width: 96px;
+  text-align: center;
+  transition: box-shadow var(--t-fast), transform var(--t-fast), background var(--t-fast);
+}
+
+.s5-train-btn.s5-cta {
+  box-shadow: 0 0 0 0 rgba(74, 139, 107, 0.0);
+  animation: s5-cta-pulse 2.2s ease-in-out infinite;
+}
+@keyframes s5-cta-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 139, 107, 0.18); }
+  50%      { box-shadow: 0 0 0 6px rgba(74, 139, 107, 0.06); }
+}
+
+.s5-train-btn.s5-pause {
+  background: var(--panel);
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* ----- note + closing ----- */
+
+.s5-note {
+  margin: 6px 0 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  font-style: italic;
+  max-width: none;
+}
+
+.s5-closing {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--ink-soft);
+  border-top: 1px solid var(--rule);
+  padding-top: 10px;
+  max-width: none;
+  transition: opacity var(--t-med);
+}
+.s5-closing.s5-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ----- responsive ----- */
+@media (max-width: 1100px) {
+  .s5-vf-wrap {
+    max-height: 60vw;
+  }
+}

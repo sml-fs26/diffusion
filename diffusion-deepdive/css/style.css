@@ -1,0 +1,411 @@
+/* ==========================================================================
+   Diffusion deep-dive — theme tokens
+   Light = lecture default. Dark = solo study.
+   ========================================================================== */
+
+:root {
+  /* Light mode (default) */
+  --bg: #f9f7f1;
+  --ink: #1a1a1a;
+  --ink-soft: #2a2a2a;
+  --muted: #6b6b6b;
+  --rule: #d8d4ca;
+  --panel: #ffffff;
+  --panel-hover: #fdfbf5;
+  --accent: #1a1a1a;
+  --accent-soft: #6b6b6b;
+
+  /* Categorical palette (per course-viz skill).
+     Diffusion semantic mapping (matches the lecture's handwritten color code):
+       cluster-1 (blue)   = x_t / data / fade
+       cluster-2 (red)    = ε / noise added in forward
+       cluster-3 (amber)  = highlight / emphasis (NOT identity)
+       cluster-4 (purple) = fast-forward path / aggregate
+       cluster-5 (green)  = ε̂ / NN prediction / fresh noise z
+       cluster-6 (orange) = total noise from x_0 → x_t
+  */
+  --c1: #2f6cb1;
+  --c2: #b8323a;
+  --c3: #c08a3e;
+  --c4: #7a5c8c;
+  --c5: #4a8b6b;
+  --c6: #a05a2c;
+
+  /* Functional */
+  --grid-line: rgba(0, 0, 0, 0.06);
+  --noise-bg: rgba(184, 50, 58, 0.06);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+
+  /* Timing */
+  --t-fast: 200ms;
+  --t-med: 400ms;
+  --t-slow: 700ms;
+}
+
+[data-theme="dark"] {
+  --bg: #181612;
+  --ink: #ece7d9;
+  --ink-soft: #c8c2b3;
+  --muted: #8a8579;
+  --rule: #383530;
+  --panel: #232019;
+  --panel-hover: #2a2620;
+  --accent: #ece7d9;
+  --accent-soft: #c8c2b3;
+
+  --c1: #6ba3d8;
+  --c2: #e07377;
+  --c3: #e5b266;
+  --c4: #b395c2;
+  --c5: #84c4a4;
+  --c6: #d89478;
+
+  --grid-line: rgba(236, 231, 217, 0.05);
+  --noise-bg: rgba(224, 115, 119, 0.07);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* ==========================================================================
+   Base / reset
+   ========================================================================== */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  height: 100vh;
+  overflow: hidden;
+  transition: background var(--t-med), color var(--t-med);
+}
+
+body {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-columns: 1fr;
+}
+
+h1, h2, h3 {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+h1 {
+  font-size: clamp(40px, 6vw, 72px);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+
+h2 { font-size: clamp(26px, 3vw, 36px); line-height: 1.15; margin-bottom: 12px; }
+h3 { font-size: clamp(18px, 1.6vw, 22px); line-height: 1.25; margin-bottom: 8px; }
+
+p { margin-bottom: 12px; max-width: 60ch; }
+.muted { color: var(--muted); }
+strong { color: var(--ink); font-weight: 600; }
+em { font-style: italic; }
+code, .mono {
+  font-family: "SF Mono", "Menlo", "JetBrains Mono", monospace;
+  font-size: 0.92em;
+}
+
+kbd {
+  font-family: "SF Mono", "Menlo", monospace;
+  font-size: 0.82em;
+  padding: 1px 5px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--panel);
+  color: var(--ink-soft);
+}
+
+/* ==========================================================================
+   Topbar
+   ========================================================================== */
+
+.topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg);
+  font-size: 14px;
+  z-index: 10;
+}
+
+.topbar-left  { justify-self: start;  display: flex; gap: 8px; align-items: baseline; }
+.topbar-center{ justify-self: center; }
+.topbar-right { justify-self: end;    display: flex; gap: 16px; align-items: center; }
+
+.brand {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+}
+.brand-sep { color: var(--muted); }
+.brand-title { color: var(--muted); font-size: 14px; }
+
+.scene-title {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.theme-toggle {
+  font: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--rule);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.theme-toggle:hover { border-color: var(--ink); color: var(--ink); }
+.theme-toggle .theme-sep { margin: 0 4px; opacity: 0.5; }
+[data-theme="light"] .theme-label-dark  { color: var(--ink); font-weight: 500; }
+[data-theme="dark"]  .theme-label-light { color: var(--ink); font-weight: 500; }
+
+.dots { display: flex; gap: 6px; }
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--rule);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.dot:hover { border-color: var(--accent); }
+.dot.active { background: var(--accent); border-color: var(--accent); }
+
+/* ==========================================================================
+   Stage / scene transitions
+   ========================================================================== */
+
+.stage { position: relative; overflow: hidden; }
+
+.scene {
+  position: absolute; inset: 0;
+  padding: 32px 56px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--t-med);
+  display: flex;
+  flex-direction: column;
+}
+
+.scene.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.scene-stub {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  text-align: center;
+  color: var(--muted);
+}
+
+/* ==========================================================================
+   Controls (footer)
+   ========================================================================== */
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 28px;
+  border-top: 1px solid var(--rule);
+  background: var(--bg);
+  z-index: 10;
+}
+
+.kbd-hint { color: var(--muted); font-size: 12px; }
+
+.btn {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--rule);
+  padding: 8px 18px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+.btn:hover:not(:disabled) {
+  background: var(--panel-hover);
+  border-color: var(--ink);
+}
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn.primary {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.btn.primary:hover:not(:disabled) { background: var(--ink-soft); }
+
+/* ==========================================================================
+   Cluster classes — never inline color in scene code
+   ========================================================================== */
+
+.cluster-1 { color: var(--c1); }
+.cluster-2 { color: var(--c2); }
+.cluster-3 { color: var(--c3); }
+.cluster-4 { color: var(--c4); }
+.cluster-5 { color: var(--c5); }
+.cluster-6 { color: var(--c6); }
+
+svg .point.cluster-1, svg circle.cluster-1, svg path.cluster-1 { fill: var(--c1); }
+svg .point.cluster-2, svg circle.cluster-2, svg path.cluster-2 { fill: var(--c2); }
+svg .point.cluster-3, svg circle.cluster-3, svg path.cluster-3 { fill: var(--c3); }
+svg .point.cluster-4, svg circle.cluster-4, svg path.cluster-4 { fill: var(--c4); }
+svg .point.cluster-5, svg circle.cluster-5, svg path.cluster-5 { fill: var(--c5); }
+svg .point.cluster-6, svg circle.cluster-6, svg path.cluster-6 { fill: var(--c6); }
+
+svg .stroke-cluster-1 { stroke: var(--c1); }
+svg .stroke-cluster-2 { stroke: var(--c2); }
+svg .stroke-cluster-3 { stroke: var(--c3); }
+svg .stroke-cluster-4 { stroke: var(--c4); }
+svg .stroke-cluster-5 { stroke: var(--c5); }
+svg .stroke-cluster-6 { stroke: var(--c6); }
+
+svg .point {
+  stroke: var(--bg);
+  stroke-width: 0.6;
+  transition: fill var(--t-med);
+}
+
+svg .axis text { fill: var(--muted); font-size: 11px; }
+svg .axis line, svg .axis path { stroke: var(--rule); }
+svg .grid line { stroke: var(--grid-line); }
+
+/* ==========================================================================
+   Common scene layouts
+   ========================================================================== */
+
+.scene-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.6fr);
+  gap: 36px;
+  height: 100%;
+  align-items: stretch;
+  min-height: 0;
+}
+.scene-layout.right-text { grid-template-columns: minmax(0, 0.6fr) minmax(320px, 1fr); }
+.scene-layout.center     { grid-template-columns: 1fr; }
+.scene-layout.split-eq   { grid-template-columns: 1fr 1fr; }
+
+@media (max-width: 1100px) {
+  .scene-layout, .scene-layout.right-text, .scene-layout.split-eq {
+    grid-template-columns: 1fr;
+  }
+}
+
+.viz-wrap {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  overflow: hidden;
+  min-height: 320px;
+  min-width: 0;
+}
+
+.viz-wrap svg { display: block; width: 100%; height: 100%; }
+
+.text-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 56ch;
+  min-width: 0;
+}
+
+.callout {
+  border-left: 3px solid var(--accent);
+  background: var(--panel);
+  padding: 14px 16px;
+  margin: 14px 0;
+  border-radius: 0 4px 4px 0;
+}
+.callout .callout-title {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.sidebar-note {
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  padding: 12px 14px;
+  border-radius: 4px;
+  margin: 12px 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.sidebar-note .sidebar-title {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.formula-block {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 18px 20px;
+  margin: 14px 0;
+  text-align: center;
+}
+
+.step-controls { display: flex; gap: 8px; align-items: center; margin-top: 16px; }
+.step-pill { font-size: 12px; color: var(--muted); font-style: italic; }
+
+/* MNIST-pane canvas helper — explicit dimensions to defeat flex stretching
+   (see skill §Things to never do — canvases inside flex/grid). */
+.mnist-pane {
+  display: inline-block;
+  background: #000;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+[data-theme="dark"] .mnist-pane { background: #000; }
+
+/* ==========================================================================
+   KaTeX inherits via currentColor
+   ========================================================================== */
+
+.katex { color: var(--ink); }
+.formula-block .katex-display { margin: 0; }
+
+/* ==========================================================================
+   Utility
+   ========================================================================== */
+
+.fade-in { animation: fadein var(--t-med) ease-out forwards; }
+@keyframes fadein {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hidden    { display: none; }
+.invisible { visibility: hidden; }

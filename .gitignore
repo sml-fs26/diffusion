@@ -1,0 +1,13 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Precompute artefacts — large, regenerable, never loaded by the viz at runtime.
+# Re-create with: python3 build_data.py  (after train_mnist_unet.py / Colab run).
+diffusion-deepdive/precompute/_artifacts/
+diffusion-deepdive/precompute/_mnist_cache/
+diffusion-deepdive/precompute/_sanity/
+diffusion-deepdive/precompute/_sanity_*/

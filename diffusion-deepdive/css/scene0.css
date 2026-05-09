@@ -1,0 +1,92 @@
+/* Scene 0 — title hero. Big serif title centered, with a discreet diffusing
+ * background of letter-M points as ambient texture. */
+
+.scene[data-scene="0"] {
+  padding: 0;
+  overflow: hidden;
+}
+
+.hero-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero-bg .point {
+  opacity: 0.15;
+  stroke: none;
+}
+
+.hero-stack {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 760px;
+  width: 100%;
+  padding: 0 32px;
+}
+
+.hero-title {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(64px, 9vw, 132px);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+  margin: 0 0 22px 0;
+
+  /* Pre-set fade-in target — JS overrides on entrance. */
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.hero-tagline {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(20px, 2.2vw, 28px);
+  line-height: 1.4;
+  color: var(--muted);
+  max-width: 32ch;
+  margin: 0 auto;
+
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.hero-cta {
+  margin-top: clamp(48px, 8vh, 96px);
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  max-width: none;
+
+  opacity: 0;
+  transition: opacity 700ms ease-out;
+}
+.hero-cta.visible { opacity: 1; }
+.hero-cta kbd {
+  font-size: 11px;
+  margin: 0 2px;
+}
+
+@media (max-height: 720px) {
+  .hero-title { font-size: clamp(52px, 7.5vw, 96px); margin-bottom: 16px; }
+  .hero-tagline { font-size: clamp(18px, 1.9vw, 22px); }
+  .hero-cta { margin-top: clamp(28px, 5vh, 56px); }
+}
