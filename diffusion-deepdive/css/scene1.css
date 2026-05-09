@@ -235,16 +235,18 @@
   margin-bottom: 0;
 }
 
-/* ---- tail line --------------------------------------------------------- */
+/* ---- Step / Reset buttons --------------------------------------------- */
 
-.s1-tail {
-  margin: 8px 0 0 0;
-  font-size: 14px;
-  color: var(--ink-soft);
-  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
-  font-style: normal;
+.s1-ctrl-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
 }
-.s1-tail em { font-style: italic; color: var(--ink); }
+
+.s1-step-btn { min-width: 110px; }
+.s1-reset-btn { min-width: 90px; }
+.s1-step-counter { margin-left: auto; }
 
 /* ---- Responsive -------------------------------------------------------- */
 

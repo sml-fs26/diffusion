@@ -43,7 +43,9 @@ window.scenes.scene5 = function (root) {
   const ARROW_TARGET_LEN = 0.15;    // longest arrow in plot units
   const REFRESH_EVERY    = 5;       // recompute field / loss curve every N steps
   const PLATEAU_DROP     = 0.6;     // 60% loss drop threshold
-  const MAX_STEPS_AUTO   = 1000;
+  // Bumped from 1000 → 1500 because at 1000 steps the reverse process in
+  // scene 6 didn't yet produce a clean M. 1500 ≈ the empirical floor.
+  const MAX_STEPS_AUTO   = 1500;
   const STEPS_TOTAL      = 4;       // cursor max+1
 
   /* ----- shared state ----------------------------------------------------- */

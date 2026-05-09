@@ -566,12 +566,57 @@ At that point: `npm i -g playwright` once, then a small helper that takes `(path
 1. Edit the file.
 2. **Parse-check** every JS file you touched (§1).
 3. **Headless screenshot** at one or two viewports (§3).
-4. **Read** the PNG. Inspect.
+4. **Read** the PNG. Inspect against the §Aesthetic-issue checklist below.
 5. If a state needs verifying that requires interaction or scroll, add a `?test=` URL param and re-screenshot.
 6. Browser walkthrough in both themes (§2) for any non-trivial change.
 7. Only then commit + push.
 
 Step 4 — the agent actually looking at the screenshot — is what makes the rest work. Don't skip it. The "trust but verify" rule applies to your own work too.
+
+## Aesthetic-issue checklist (apply to EVERY captured screenshot)
+
+This list is what to look for when you `Read` the PNG. Don't declare a scene done until each of these is verified clear at 1400×900 light theme — and re-checked at 1400×900 dark theme. Most of them are invisible to a code-review pass; they only show up in pixels.
+
+**Cropping / overflow.** Is anything cut at the top, bottom, left, or right edge of the scene's stage area? Specifically:
+- Hero formulae cropped under the topbar — common when a content column outgrew its scene height.
+- Closing captions or stats clipped at the footer edge — same cause from the bottom.
+- Long titles wrapped or sliced — chart titles, button labels, axis ticks.
+- Right-column text wider than the scene-layout right cell — the right column is `minmax(320px, 0.6fr)`; long lines with no wrap word-break and overflow.
+
+If the scene is supposed to fit the viewport, it must fit. Add a `@media (max-height: ...)` block that shrinks panes or adds `overflow: auto` on the scene container (with a clear scroll affordance), and re-screenshot.
+
+**Chart legibility.** Charts often look fine in code but unreadable in pixels. Specifically:
+- A series whose y-range is dwarfed by another on a shared axis ends up as a near-flat line at the foot of the chart (real example: β_t on [1e-4, 0.02] sharing an axis with ᾱ_t on [0, 1] was a horizontal hairline). **Fix**: split into stacked panels, each with its own y-axis. Don't overload a single dual-axis plot if the audience needs to compare both curves.
+- Hairline strokes (`stroke-width: 1`) disappear on projector resolutions. Use `stroke-width: 2–3` for primary curves; reserve thin strokes for grids and rules.
+- Tick labels and legends that fit at 72-DPI but don't at projector size. If the chart's legend reads "βₜ" / "ᾱₜ" in 9 px italics, lecture-hall students won't see it. Use 11 px+ and put titles ABOVE the chart, not as inline legends at curve endpoints.
+- Axis labels truncated. Always reserve enough left/right margin for the longest label you'll print.
+
+**Layout pressure.** The scene's content column may LOOK fine, but there's only so much screen height. Common smells:
+- New element added (callout, slider, secondary panel) silently pushes existing content past the bottom edge — and this is the screenshot agent's blind spot, because you only see the visible portion. After any addition, re-capture and verify *every* element is still in-frame.
+- A second pane was added side-by-side, and at the lecture viewport (1400×900) the right column has no air. Either drop a less-essential element or swap to a vertical stack.
+
+**Animation mid-frame.** The scene engine fades scenes in over 400 ms via `opacity: 0 → 1`. Headless screenshots taken under `--virtual-time-budget` may capture mid-transition — the page looks ghost-faded. Symptoms: text and SVG points present but at low alpha. Defeat this by either (a) raising the budget, or (b) inside the scene, when the `&run` flag is set, force `root.style.transition = 'none'; root.style.opacity = 1;` after painting. Match the pattern in `scene0.js`'s `paintFinal()`.
+
+**Theme contrast.** Anything that's only legible in light mode is a defect in dark mode. Specifically:
+- White-on-white panels (forgot to use `var(--panel)` instead of literal `#fff`).
+- Black SVG strokes (forgot to use `currentColor` / theme tokens).
+- Hairline rules (`#d8d4ca` light / `#383530` dark) disappear in opposite themes if hard-coded.
+
+**Empty state.** Scenes that gate their content behind a button often paint nothing on cursor 0. The first screenshot the user sees is empty space. Always paint *something* meaningful (a noise sample, a faint preview) at cursor 0 so the affordance is clear.
+
+**Off-by-one / cluster grouping.** Group identity colors (the `cluster-N` palette) cross-talk if reused for emphasis. If a callout is amber but amber is also a cluster, students will infer a non-existent group identity. See the cross-talk rule above; reserve a third hue for emphasis.
+
+### Forcing the review
+
+Before reporting a scene as done, write the four-line review out loud:
+1. "I screenshotted scene N at 1400×900 light theme."
+2. "I `Read` the PNG and looked at it."
+3. "I checked it against §Aesthetic-issue checklist — nothing in the list is present."
+4. "I also screenshotted dark theme and the issues from §3 are not present there either."
+
+If you can't write this out, the scene isn't done. Don't claim it is.
+
+Real story (this skill, May 2026): a five-agent fan-out shipped six scenes that all *parsed* and all *visually drew* — and then user inspection found three different scenes with cropping issues, one chart where two curves were mutually invisible, one scene with a fade-in caught mid-transition, and a generated digit pane that looked OK in scene 5's vector field but didn't reverse to the right shape in scene 6 (the model trained 1500 steps wasn't enough — needed 3000). Every one of these was visible in a screenshot the agent took but didn't actually open. The cost was a full revisit pass. The lesson: the screenshot is only verification if you look at it, and you only know what you saw if you write it down.
 
 ## Things to never do
 

@@ -43,8 +43,8 @@ window.scenes.scene3 = function (root) {
   header.appendChild(title);
 
   const sub = document.createElement('p');
-  sub.className = 's3-sub muted';
-  sub.innerHTML = '<em>Iterating <span class="cluster-1">β<sub>t</sub></span> for t steps. Or one shot through <span class="cluster-4">ᾱ<sub>t</sub></span>.</em>';
+  sub.className = 's3-sub';
+  sub.innerHTML = 'Iterating <span class="cluster-1">x<sub>t+1</sub> = √(1−β<sub>t</sub>) x<sub>t</sub> + √β<sub>t</sub> ε<sub>t</sub></span> for <em>t</em> steps lands on the same distribution as one shot through <span class="cluster-4">x<sub>t</sub> = √ᾱ<sub>t</sub> x<sub>0</sub> + √(1−ᾱ<sub>t</sub>) ε̂</span>. Compute is the only thing that differs.';
   header.appendChild(sub);
 
   // Split layout: two columns

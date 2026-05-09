@@ -200,49 +200,60 @@
 
 .s2-chart-wrap {
   width: 100%;
-  height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .s2-chart-svg {
   width: 100%;
-  height: 100%;
+  height: 110px;
   display: block;
 }
 
 .s2-chart-bg {
   fill: var(--bg);
-  stroke: none;
-  opacity: 0.5;
+  stroke: var(--rule);
+  stroke-width: 0.4;
+  opacity: 0.6;
 }
 
-.s2-chart-beta,
-.s2-chart-alpha {
+.s2-chart-line {
   fill: none;
-  stroke-width: 1.5;
+  stroke-width: 2.5;
 }
 
 .s2-chart-cursor-line {
-  stroke-width: 1.2;
-  opacity: 0.85;
+  stroke-width: 1.4;
+  opacity: 0.9;
+  stroke-dasharray: 2 2;
 }
 .s2-chart-dot {
   stroke: var(--bg);
-  stroke-width: 0.8;
+  stroke-width: 1;
 }
+.s2-chart-dot.cluster-1 { fill: var(--c1); }
+.s2-chart-dot.cluster-2 { fill: var(--c2); }
 
-.s2-chart-y-l, .s2-chart-y-r, .s2-chart-x-l {
+.s2-chart-y-lbl, .s2-chart-x-lbl {
   font-family: "SF Mono", "Menlo", monospace;
-  font-size: 9px;
+  font-size: 10px;
   fill: var(--muted);
 }
 
-.s2-chart-legend {
+.s2-chart-title {
   font-family: "Iowan Old Style", "Palatino", Georgia, serif;
   font-style: italic;
   font-size: 11px;
-  fill: currentColor;
+  fill: var(--ink-soft);
 }
-.s2-chart-legend.cluster-1 { fill: var(--c1); }
-.s2-chart-legend.cluster-2 { fill: var(--c2); }
+
+.s2-chart-readout {
+  font-family: "SF Mono", "Menlo", monospace;
+  font-size: 10px;
+  font-weight: 600;
+}
+.s2-chart-readout.cluster-1 { fill: var(--c1); }
+.s2-chart-readout.cluster-2 { fill: var(--c2); }
 
 /* ---- Controls --------------------------------------------------------- */
 
@@ -303,5 +314,5 @@
 @media (max-height: 760px) {
   .s2-mnist-canvas { width: 96px; height: 96px; }
   .s2-counter-value { font-size: 24px; }
-  .s2-chart-wrap { height: 100px; }
+  .s2-chart-svg { height: 90px; }
 }

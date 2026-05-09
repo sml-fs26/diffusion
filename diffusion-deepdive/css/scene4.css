@@ -213,20 +213,60 @@
   stroke-width: 0.04;
 }
 
-/* Tighten layout on shorter viewports so everything is in-frame. */
+/* "Why predicted ε̂ is not working" callout. Sits between the buttons and
+   the result panel. Compact, italic, single short paragraph. */
+.s4-whynot {
+  width: 100%;
+  max-width: 760px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--c5);
+  border-radius: 0 4px 4px 0;
+  padding: 10px 14px;
+}
+.s4-whynot-title {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--ink);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.s4-whynot-body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  max-width: none;
+}
+.s4-whynot-body em { font-style: italic; }
+.s4-whynot-body .mono { font-family: "SF Mono","Menlo",monospace; font-size: 0.95em; }
+
+/* Tighten layout for the default lecture-projector viewport (1400×900).
+   The whyNot callout costs ~70 px; keep everything else lean. */
+.s4-hero { gap: 8px; padding-top: 4px; }
+.s4-formula { padding: 10px 18px 12px; }
+.s4-formula .katex-display { font-size: 0.92em; }
+.s4-bigbtn { height: 64px; width: 250px; padding: 8px 14px; }
+.s4-bigbtn-label { font-size: 15px; }
+.s4-bigbtn-sub { font-size: 11px; }
+.s4-pane { padding: 8px; }
+.s4-svg-2d { width: 280px; height: 280px; }
+.s4-pane-2d { width: 300px; }
+.s4-pane-mn { width: 170px; }
+.s4-mnist-canvas { width: 152px; height: 152px; }
+.s4-eyebrow { font-size: 12px; margin-bottom: 0; }
+.s4-subcap { font-size: 13px; margin: 0; }
+.s4-verdict { font-size: 17px; margin-top: 2px; min-height: 20px; }
+.s4-closing { font-size: 14px; margin-top: 4px; }
+
 @media (max-height: 820px) {
-  .s4-formula { padding: 12px 18px; }
-  .s4-formula .katex-display { font-size: 0.92em; }
-  .s4-bigbtn { height: 64px; width: 240px; padding: 8px 14px; }
-  .s4-bigbtn-label { font-size: 15px; }
-  .s4-bigbtn-sub { font-size: 11px; }
-  .s4-svg-2d { width: 300px; height: 300px; }
-  .s4-pane-2d { width: 324px; }
-  .s4-pane-mn { width: 180px; }
-  .s4-mnist-canvas { width: 156px; height: 156px; }
-  .s4-hero { gap: 8px; }
-  .s4-pane { padding: 8px; }
-  .s4-eyebrow { font-size: 12px; }
+  .s4-bigbtn { height: 58px; width: 230px; }
+  .s4-svg-2d { width: 240px; height: 240px; }
+  .s4-pane-2d { width: 260px; }
+  .s4-pane-mn { width: 150px; }
+  .s4-mnist-canvas { width: 132px; height: 132px; }
+  .s4-whynot { padding: 8px 12px; }
+  .s4-whynot-body { font-size: 12px; }
 }
 
 @media (max-width: 980px) {

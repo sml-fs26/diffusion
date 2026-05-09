@@ -41,7 +41,12 @@ window.scenes.scene6 = function (root) {
   const LR         = 2e-3;
   const SEED_TRAIN = 7;
   const BATCH_SIZE = 64;
-  const COLD_BURST = 200;
+  // Cold-burst training count when scene 6 is entered without scene 5 having
+  // run. 200 → 1500 → 3000 in successive iterations: at 1500 the M emerged
+  // only as two vertical bars (legs) without the diagonal valley between
+  // them. 3000 reliably gives a cloud whose silhouette reads as M.
+  // Wall time: ~3–4 s on a laptop, blocking the main thread.
+  const COLD_BURST = 3000;
 
   /* ----- shared --------------------------------------------------------- */
 
@@ -566,7 +571,8 @@ window.scenes.scene6 = function (root) {
   }
 
   // For headless: synchronously walk the entire reverse trajectory and paint
-  // the final state. No animation.
+  // the final state. No animation. Also forces the scene's fade-in to its
+  // final opacity so headless screenshots don't catch a half-transparent stage.
   function instantGenerate() {
     if (!state.twoDModel) return;
     reset2DToNoise();
@@ -577,6 +583,9 @@ window.scenes.scene6 = function (root) {
     paintMnistSnapshots();
     state.cursor = 2;
     rollBtn.disabled = false;
+    // Defeat the scene-engine 400 ms fade for headless capture.
+    root.style.transition = 'none';
+    root.style.opacity = 1;
   }
 
   function fullEnter() {
@@ -595,13 +604,16 @@ window.scenes.scene6 = function (root) {
 
     ensureTwoDModel().then(() => {
       // After cold-burst (or warm short-circuit), repaint with proper noise
-      // sample.  No auto-generate — user clicks GENERATE.
+      // sample. No auto-generate — user clicks GENERATE.
       paintInitialState();
       if (shouldAutoRun()) {
-        // Headless: train more for a recognizable M, then jump to final state.
-        if (state.twoDModel && state.twoDModel.step < 800) {
+        // Headless: ensure at least 3000 steps are in the bag (the empirical
+        // floor for the M's diagonal valley to read in the reverse output),
+        // then jump straight to the final generated state.
+        const TARGET = 3000;
+        if (state.twoDModel && state.twoDModel.step < TARGET) {
           const rng = M.mulberry32(SEED_TRAIN + 9001 + state.twoDModel.step);
-          for (let s = 0; s < 600; s++) {
+          while (state.twoDModel.step < TARGET) {
             const batch = NN.sample2DBatch(DATA.letterM.points, DATA.alphaBars, BATCH_SIZE, rng);
             state.twoDModel.trainBatch(batch);
           }

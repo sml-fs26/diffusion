@@ -129,10 +129,6 @@ window.scenes.scene2 = function (root) {
   textCol.className = 'text-col s2-text';
   layout.appendChild(textCol);
 
-  const stepPill = document.createElement('div');
-  stepPill.className = 'step-pill s2-step-pill';
-  textCol.appendChild(stepPill);
-
   const heading = document.createElement('h2');
   heading.textContent = 'All the way to chaos.';
   textCol.appendChild(heading);
@@ -157,24 +153,29 @@ window.scenes.scene2 = function (root) {
   `;
   timePanel.appendChild(counter);
 
+  // Two stacked charts (β_t on top, ᾱ_t below) — each with its own y-axis,
+  // each fills the panel width. Far easier to read than the dual-axis variant.
   const chartWrap = document.createElement('div');
   chartWrap.className = 's2-chart-wrap';
   timePanel.appendChild(chartWrap);
 
-  const chartSvg = d3.select(chartWrap).append('svg')
-    .attr('class', 's2-chart-svg')
-    .attr('viewBox', '0 0 320 120')
+  const chartBetaSvg = d3.select(chartWrap).append('svg')
+    .attr('class', 's2-chart-svg s2-chart-beta-svg')
+    .attr('viewBox', '0 0 320 110')
     .attr('preserveAspectRatio', 'none');
 
-  // Controls: play/pause + scrubber
+  const chartAlphaSvg = d3.select(chartWrap).append('svg')
+    .attr('class', 's2-chart-svg s2-chart-alpha-svg')
+    .attr('viewBox', '0 0 320 110')
+    .attr('preserveAspectRatio', 'none');
+
+  // Controls: scrubber only (play removed — direct scrubbing is the lesson)
   const controls = document.createElement('div');
   controls.className = 's2-controls';
   controls.innerHTML = `
-    <button class="btn s2-play-btn" type="button">Play</button>
-    <input type="range" class="s2-scrubber" min="0" max="${T - 1}" step="1" value="0" disabled>
+    <input type="range" class="s2-scrubber" min="0" max="${T - 1}" step="1" value="0">
   `;
   textCol.appendChild(controls);
-  const playBtn = controls.querySelector('.s2-play-btn');
   const scrubber = controls.querySelector('.s2-scrubber');
 
   // Histogram toggle
@@ -278,102 +279,115 @@ window.scenes.scene2 = function (root) {
     if (tNow) tNow.textContent = String(state.t);
   }
 
-  /* ----- chart (β_t and ᾱ_t curves + cursor line) -------------------------- */
+  /* ----- chart (two stacked panels: β_t on top, ᾱ_t on bottom) ----------- */
 
-  // Layout in viewBox (320 × 120):
-  //   left margin 36, right margin 14, top 8, bottom 22.
-  //   x ∈ [0, T-1]   →   [36, 306]
-  //   y ∈ [0, 1]     →   [8, 98]   (β shown on its own scale; ᾱ on [0,1])
-  const CH = { L: 36, R: 14, T: 8, B: 22, W: 320, H: 120 };
-  function chx(t) { return CH.L + (t / (T - 1)) * (CH.W - CH.L - CH.R); }
+  // Each chart viewBox is 320 × 110. Each has L/R margins for axis labels.
+  const CH = { L: 44, R: 22, T: 14, B: 26, W: 320, H: 110 };
+  const PLOT_W = CH.W - CH.L - CH.R;
+  const PLOT_H = CH.H - CH.T - CH.B;
+  function chx(t) { return CH.L + (t / (T - 1)) * PLOT_W; }
 
-  // β has range [1e-4, 0.02] in this schedule; we plot it on its own scale
-  // for legibility (else it is an indistinguishable horizontal line at the
-  // foot of the chart). ᾱ uses the natural [0,1] axis.
   const BETA_MAX = Math.max.apply(null, DATA.betas);
-  function chy_beta(b)   { return CH.T + (1 - b / BETA_MAX) * (CH.H - CH.T - CH.B); }
-  function chy_alpha(a)  { return CH.T + (1 - a)            * (CH.H - CH.T - CH.B); }
+  const ALPHA_MIN = Math.min.apply(null, DATA.alphaBars);  // ≈ 0.13
+  function chy_beta(b)  { return CH.T + (1 - b / BETA_MAX) * PLOT_H; }
+  // ᾱ goes from 1 down to ALPHA_MIN; map to full plot height for legibility.
+  function chy_alpha(a) { return CH.T + ((1 - a) / (1 - ALPHA_MIN)) * PLOT_H; }
 
-  function renderChartStatic() {
-    chartSvg.selectAll('*').remove();
+  function _renderOneChart(svg, opts) {
+    // opts: { title, color, yLabels: [topVal, botVal], series, yMap, cursorYAt }
+    svg.selectAll('*').remove();
 
-    // Plot bg
-    chartSvg.append('rect')
-      .attr('class', 's2-chart-bg')
+    // Title (top-left, italic muted)
+    svg.append('text').attr('class', 's2-chart-title')
+      .attr('x', CH.L).attr('y', CH.T - 4)
+      .text(opts.title);
+
+    // Plot area background
+    svg.append('rect').attr('class', 's2-chart-bg')
       .attr('x', CH.L).attr('y', CH.T)
-      .attr('width',  CH.W - CH.L - CH.R)
-      .attr('height', CH.H - CH.T - CH.B);
+      .attr('width', PLOT_W).attr('height', PLOT_H);
 
-    // y-axis labels (left = β scale, right = ᾱ scale)
-    chartSvg.append('text').attr('class', 's2-chart-y-l')
-      .attr('x', CH.L - 4).attr('y', CH.T + 9).attr('text-anchor', 'end')
-      .text(BETA_MAX.toFixed(2));
-    chartSvg.append('text').attr('class', 's2-chart-y-l')
-      .attr('x', CH.L - 4).attr('y', CH.H - CH.B).attr('text-anchor', 'end')
-      .text('0');
-
-    chartSvg.append('text').attr('class', 's2-chart-y-r')
-      .attr('x', CH.W - CH.R + 4).attr('y', CH.T + 9).attr('text-anchor', 'start')
-      .text('1');
-    chartSvg.append('text').attr('class', 's2-chart-y-r')
-      .attr('x', CH.W - CH.R + 4).attr('y', CH.H - CH.B).attr('text-anchor', 'start')
-      .text('0');
+    // y-axis labels (top + bottom)
+    svg.append('text').attr('class', 's2-chart-y-lbl')
+      .attr('x', CH.L - 6).attr('y', CH.T + 5).attr('text-anchor', 'end')
+      .text(opts.yLabels[0]);
+    svg.append('text').attr('class', 's2-chart-y-lbl')
+      .attr('x', CH.L - 6).attr('y', CH.T + PLOT_H).attr('text-anchor', 'end')
+      .text(opts.yLabels[1]);
 
     // x-axis labels
-    chartSvg.append('text').attr('class', 's2-chart-x-l')
+    svg.append('text').attr('class', 's2-chart-x-lbl')
       .attr('x', CH.L).attr('y', CH.H - 6).attr('text-anchor', 'start')
       .text('t = 0');
-    chartSvg.append('text').attr('class', 's2-chart-x-l')
-      .attr('x', CH.W - CH.R).attr('y', CH.H - 6).attr('text-anchor', 'end')
+    svg.append('text').attr('class', 's2-chart-x-lbl')
+      .attr('x', CH.L + PLOT_W).attr('y', CH.H - 6).attr('text-anchor', 'end')
       .text(`t = ${T - 1}`);
 
-    // β line (red, cluster-2)
-    const betaLine = d3.line()
+    // The curve
+    const line = d3.line()
       .x((_, i) => chx(i))
-      .y(d => chy_beta(d));
-    chartSvg.append('path')
-      .attr('class', 's2-chart-beta stroke-cluster-2')
-      .attr('d', betaLine(DATA.betas));
+      .y(d => opts.yMap(d));
+    svg.append('path')
+      .attr('class', `s2-chart-line ${opts.colorClass}`)
+      .attr('d', line(opts.series));
 
-    // ᾱ line (blue, cluster-1)
-    const alphaLine = d3.line()
-      .x((_, i) => chx(i))
-      .y(d => chy_alpha(d));
-    chartSvg.append('path')
-      .attr('class', 's2-chart-alpha stroke-cluster-1')
-      .attr('d', alphaLine(DATA.alphaBars));
-
-    // legend (text labels at the right end of each curve)
-    chartSvg.append('text').attr('class', 's2-chart-legend cluster-2')
-      .attr('x', CH.W - CH.R - 2).attr('y', chy_beta(DATA.betas[T - 1]) - 4)
-      .attr('text-anchor', 'end')
-      .text('βₜ');
-    chartSvg.append('text').attr('class', 's2-chart-legend cluster-1')
-      .attr('x', CH.W - CH.R - 2).attr('y', chy_alpha(DATA.alphaBars[T - 1]) + 12)
-      .attr('text-anchor', 'end')
-      .text('ᾱₜ');
-
-    // cursor group (re-rendered on t change)
-    chartSvg.append('g').attr('class', 's2-chart-cursor');
+    // Cursor group
+    svg.append('g').attr('class', 's2-chart-cursor');
   }
 
-  function renderChartCursor() {
-    const g = chartSvg.select('g.s2-chart-cursor');
+  function _renderOneCursor(svg, opts) {
+    const g = svg.select('g.s2-chart-cursor');
     g.selectAll('*').remove();
     const cx = chx(state.t);
     g.append('line')
       .attr('class', 's2-chart-cursor-line stroke-cluster-3')
       .attr('x1', cx).attr('x2', cx)
-      .attr('y1', CH.T).attr('y2', CH.H - CH.B);
-    // dots on each curve
+      .attr('y1', CH.T).attr('y2', CH.T + PLOT_H);
     g.append('circle')
-      .attr('class', 's2-chart-dot cluster-2')
-      .attr('cx', cx).attr('cy', chy_beta(DATA.betas[state.t]))
-      .attr('r', 2.2);
-    g.append('circle')
-      .attr('class', 's2-chart-dot cluster-1')
-      .attr('cx', cx).attr('cy', chy_alpha(DATA.alphaBars[state.t]))
-      .attr('r', 2.2);
+      .attr('class', `s2-chart-dot ${opts.colorClass}`)
+      .attr('cx', cx).attr('cy', opts.yMap(opts.series[state.t]))
+      .attr('r', 3.2);
+    // Value readout, anchored to the right of the cursor when not too close
+    // to the right edge.
+    const txtX = (cx > CH.L + PLOT_W * 0.85) ? cx - 6 : cx + 6;
+    const anchor = (cx > CH.L + PLOT_W * 0.85) ? 'end' : 'start';
+    g.append('text')
+      .attr('class', `s2-chart-readout ${opts.colorClass}`)
+      .attr('x', txtX).attr('y', opts.yMap(opts.series[state.t]) - 6)
+      .attr('text-anchor', anchor)
+      .text(opts.format(opts.series[state.t]));
+  }
+
+  function renderChartStatic() {
+    _renderOneChart(chartBetaSvg, {
+      title: 'β_t — fade weight per step',
+      colorClass: 'stroke-cluster-2',
+      yLabels: [BETA_MAX.toFixed(3), '0'],
+      series: DATA.betas,
+      yMap: chy_beta,
+    });
+    _renderOneChart(chartAlphaSvg, {
+      title: 'ᾱ_t — cumulative signal retained',
+      colorClass: 'stroke-cluster-1',
+      yLabels: ['1', ALPHA_MIN.toFixed(2)],
+      series: DATA.alphaBars,
+      yMap: chy_alpha,
+    });
+  }
+
+  function renderChartCursor() {
+    _renderOneCursor(chartBetaSvg, {
+      colorClass: 'cluster-2',
+      series: DATA.betas,
+      yMap: chy_beta,
+      format: (b) => b.toExponential(1).replace('e+0', 'e').replace('e-0', 'e-'),
+    });
+    _renderOneCursor(chartAlphaSvg, {
+      colorClass: 'cluster-1',
+      series: DATA.alphaBars,
+      yMap: chy_alpha,
+      format: (a) => a.toFixed(3),
+    });
   }
 
   /* ----- histogram --------------------------------------------------------- */
@@ -433,22 +447,12 @@ window.scenes.scene2 = function (root) {
   /* ----- text chrome ------------------------------------------------------- */
 
   function renderTextChrome() {
-    stepPill.textContent = `Step ${state.cursor} of ${STEPS}`;
-
-    if (state.cursor === 0) {
-      tail.innerHTML = 'Press <strong>Play</strong> to run all 200 forward steps.';
-    } else if (state.cursor === 1) {
-      if (state.playing) {
-        tail.innerHTML = '<em>Sweeping…</em> one forward step at a time.';
-      } else if (state.t === T - 1) {
-        tail.innerHTML = `At <span class="mono">t = ${T - 1}</span>, the cloud is a Gaussian blob and the digit is gone. The schedule is what got us here.`;
-      } else {
-        tail.innerHTML = 'Press <strong>Play</strong> to sweep again, or scrub.';
-      }
-    } else if (state.cursor === 2) {
+    if (state.t === 0) {
       tail.innerHTML = 'Drag the slider. Watch ᾱ<sub>t</sub> fall and β<sub>t</sub> grow.';
-    } else if (state.cursor === 3) {
-      tail.innerHTML = 'Histogram visible. At t = 0, the digit is bimodal (black + white). At t = T-1, it is Gaussian.';
+    } else if (state.t === T - 1) {
+      tail.innerHTML = `At <span class="mono">t = ${T - 1}</span>, the cloud is a Gaussian blob and the digit is gone. The schedule is what got us here.`;
+    } else {
+      tail.innerHTML = `<span class="mono">t = ${state.t}</span>. Both panes update with each tick.`;
     }
   }
 
@@ -462,100 +466,18 @@ window.scenes.scene2 = function (root) {
     renderHist();
     renderTextChrome();
 
-    // Control state
+    // Control state — scrubber always enabled; histogram toggle always available
     scrubber.value = String(state.t);
-    scrubber.disabled = state.cursor < 1;
-    playBtn.disabled = state.playing;
-    playBtn.textContent = state.playing ? 'Playing…' : (state.t === T - 1 ? 'Replay' : 'Play');
+    scrubber.disabled = false;
 
-    histToggleWrap.classList.toggle('disabled', state.cursor < 3);
-    histCheckbox.disabled = state.cursor < 3;
+    histToggleWrap.classList.remove('disabled');
+    histCheckbox.disabled = false;
     histWrap.classList.toggle('visible', state.showHist);
-  }
-
-  /* ----- autoplay (RAF) ---------------------------------------------------- */
-
-  function startPlay() {
-    if (state.playing) return;
-    state.playing = true;
-    state.t = 0;
-    state.playStartTs = null;
-    render();
-    state.raf = requestAnimationFrame(playTick);
-  }
-
-  function playTick(ts) {
-    if (!state.playing) return;
-    if (state.playStartTs == null) state.playStartTs = ts;
-    const elapsed = ts - state.playStartTs;
-    const frac = Math.min(1, elapsed / SWEEP_MS);
-    state.t = Math.min(T - 1, Math.floor(frac * (T - 1)));
-    render();
-    if (frac >= 1) {
-      state.t = T - 1;
-      state.playing = false;
-      state.raf = null;
-      render();
-      return;
-    }
-    state.raf = requestAnimationFrame(playTick);
-  }
-
-  function stopPlay() {
-    if (state.raf != null) cancelAnimationFrame(state.raf);
-    state.raf = null;
-    state.playing = false;
-  }
-
-  /* ----- step engine ------------------------------------------------------- */
-
-  // setCursor moves between abstract phases. Cursor 1 triggers autoplay,
-  // cursor 2 unlocks the scrubber, cursor 3 unlocks the histogram.
-  function setCursor(c) {
-    if (c < 0 || c > STEPS) return false;
-    if (c === state.cursor && c !== 1) return false;
-    if (c === 1) {
-      // Always (re)start the sweep when entering cursor 1.
-      state.cursor = 1;
-      stopPlay();
-      startPlay();
-      return true;
-    }
-    state.cursor = c;
-    if (c === 0) {
-      stopPlay();
-      state.t = 0;
-    } else if (c === 2) {
-      // Pin at end-of-sweep so scrubbing starts from a meaningful point.
-      stopPlay();
-      if (state.t < T - 1) state.t = T - 1;
-    } else if (c === 3) {
-      stopPlay();
-      state.showHist = true;
-      histCheckbox.checked = true;
-    }
-    render();
-    return true;
   }
 
   /* ----- input handlers ---------------------------------------------------- */
 
-  playBtn.addEventListener('click', () => {
-    if (state.cursor === 0) {
-      setCursor(1);
-    } else {
-      // From cursor ≥ 1: replay
-      stopPlay();
-      state.t = 0;
-      state.cursor = 1;
-      startPlay();
-    }
-  });
-
   scrubber.addEventListener('input', () => {
-    if (state.cursor < 1) return;
-    stopPlay();
-    if (state.cursor < 2) state.cursor = 2;
     state.t = parseInt(scrubber.value, 10) | 0;
     render();
   });
@@ -568,7 +490,6 @@ window.scenes.scene2 = function (root) {
 
   histCheckbox.addEventListener('change', () => {
     state.showHist = histCheckbox.checked;
-    if (state.showHist && state.cursor < 3) state.cursor = 3;
     render();
   });
 
@@ -580,45 +501,31 @@ window.scenes.scene2 = function (root) {
   window.addEventListener('theme-change', onThemeChange);
 
   /* ----- test hook (headless verification) -------------------------------- */
-  // ?test=cursor=N (with optional &t=K) jumps straight to a state.
-  // For animation-blocked states (cursor 1), we emulate "post-sweep": we set
-  // t to T-1 and freeze playing=false.
+  // ?test=t=K (or &t=K) jumps the slider to t=K so a screenshot can land on
+  // a meaningful frame (e.g. t = T-1 for the "fully noisy" pane). With
+  // ?test=hist also pop the histogram on.
   function readTestParams() {
     const src = (window.location.search || '') + (window.location.hash || '');
-    const cm = src.match(/test=cursor=(\d+)/);
     const tm = src.match(/[?&#]t=(\d+)/);
     const out = {};
-    if (cm) {
-      const c = parseInt(cm[1], 10);
-      if (Number.isFinite(c) && c >= 0 && c <= STEPS) out.cursor = c;
-    }
     if (tm) {
       const tt = parseInt(tm[1], 10);
       if (Number.isFinite(tt) && tt >= 0 && tt < T) out.t = tt;
     }
+    out.hist = /[?&#]test=[^&]*hist/.test(src);
     return out;
   }
 
   function applyTestParams() {
     const p = readTestParams();
-    if (p.cursor == null) return;
-    stopPlay();
-    if (p.cursor === 1) {
-      // "post-sweep" state — show t = T-1 frozen, no autoplay.
-      state.cursor = 1;
-      state.t = (p.t != null) ? p.t : (T - 1);
-      state.playing = false;
-    } else if (p.cursor === 2) {
-      state.cursor = 2;
-      state.t = (p.t != null) ? p.t : (T - 1);
-    } else if (p.cursor === 3) {
-      state.cursor = 3;
-      state.t = (p.t != null) ? p.t : (T - 1);
+    if (p.t != null) state.t = p.t;
+    if (p.hist) {
       state.showHist = true;
       histCheckbox.checked = true;
-    } else if (p.cursor === 0) {
-      state.cursor = 0;
-      state.t = 0;
+    }
+    if (/[#&?]run\b/.test(window.location.hash || '')) {
+      // headless &run lands at t = T-1 so the panes show the noise endpoint.
+      state.t = T - 1;
     }
     render();
   }
@@ -632,8 +539,6 @@ window.scenes.scene2 = function (root) {
 
   return {
     onEnter() {
-      stopPlay();
-      state.cursor = 0;
       state.t = 0;
       state.showHist = false;
       histCheckbox.checked = false;
@@ -643,19 +548,9 @@ window.scenes.scene2 = function (root) {
       applyTestParams();
     },
     onLeave() {
-      stopPlay();
+      // nothing to clean up
     },
-    onNextKey() {
-      // ArrowRight: advance the abstract step engine.
-      if (state.cursor < STEPS) {
-        return setCursor(state.cursor + 1);
-      }
-      return false;
-    },
-    onPrevKey() {
-      if (state.cursor === 0) return false;
-      stopPlay();
-      return setCursor(state.cursor - 1);
-    },
+    onNextKey() { return false; },
+    onPrevKey() { return false; },
   };
 };

@@ -73,14 +73,29 @@ window.scenes.scene4 = function (root) {
     b.innerHTML = `<span class="s4-bigbtn-label">${label}</span><span class="s4-bigbtn-sub">${sub}</span>`;
     return b;
   }
-  const btnA = makeBtn('s4-btn-random cluster-2',    'Use random ε',     'sample fresh noise each step');
+  // Two paths only:
+  //   (B) the cheating path — replay the actual forward ε's. Recovers x_0 exactly.
+  //   (C) the path we'd actually need — a network's guess for ε̂. Disabled here.
   const btnB = makeBtn('s4-btn-bookkept cluster-1',  'Use bookkept ε',   'replay the saved forward noise');
-  const btnC = makeBtn('s4-btn-predicted cluster-5', 'Use predicted ε̂', 'a network guesses ε');
+  const btnC = makeBtn('s4-btn-predicted cluster-5', 'Use predicted ε̂', 'requires a trained network — see next scene');
   btnC.disabled = true;
-  btnC.title = 'Trained next scene.';
-  btnRow.appendChild(btnA);
+  btnC.title = 'Predicted ε̂ requires a trained network. We do not have one yet.';
   btnRow.appendChild(btnB);
   btnRow.appendChild(btnC);
+
+  // Why-not callout — sits below the button row, explains the gap.
+  const whyNot = document.createElement('div');
+  whyNot.className = 's4-whynot';
+  whyNot.innerHTML = `
+    <div class="s4-whynot-title">Why is predicted&nbsp;<span class="cluster-5">ε̂</span>&nbsp;not working?</div>
+    <p class="s4-whynot-body">
+      The reverse formula needs the noise <span class="cluster-2">ε</span> that was added during the forward process.
+      For images we already corrupted ourselves we still have it — that's the bookkept path.
+      But for a fresh image we want to <em>generate</em>, no forward run ever happened, so there is no <span class="cluster-2">ε</span> to read off.
+      The next scene trains a neural network to <em>guess</em> <span class="cluster-5">ε̂</span> from <span class="mono">x<sub>t</sub></span> alone.
+    </p>
+  `;
+  hero.appendChild(whyNot);
 
   // Result panel
   const result = document.createElement('div');
@@ -335,38 +350,6 @@ window.scenes.scene4 = function (root) {
 
   let lastRunner = null;
 
-  function runRandom() {
-    lastRunner = 'random';
-    const rngEps2D = Math_.mulberry32(2003);
-    const rngEpsMn = Math_.mulberry32(2017);
-    const rngZ2D   = Math_.mulberry32(3001);
-    const rngZMn   = Math_.mulberry32(3017);
-    const epsFn2D = (x_t, t) => Math_.randnVector(rngEps2D, x_t.length);
-    const epsFnMn = (x_t, t) => Math_.randnVector(rngEpsMn, x_t.length);
-    const { rev2D, revMn } = runReverse(epsFn2D, epsFnMn, rngZ2D, rngZMn);
-    const x0r_2D = rev2D.trajectory[0];
-    const x0r_mn = revMn.trajectory[0];
-
-    paint2D(x0r_2D, trailFrames(rev2D.trajectory));
-    setFinalClass('cluster-2');
-    paintMnist(x0r_mn);
-
-    verdict.innerHTML = '<em class="cluster-2">Result: garbage.</em>';
-    const m2 = mse(x0r_2D, x0_2D);
-    const mp = mse(x0r_mn, x0_mnist);
-    const r2 = relErr(x0r_2D, x0_2D);
-    const rp = relErr(x0r_mn, x0_mnist);
-    stats.innerHTML =
-      `<span>2D MSE vs <span class="mono">x&#8320;</span>: <span class="mono">${fmt(m2)}</span> &middot; rel.err <span class="mono">${fmt(r2)}</span></span>` +
-      `<span>Pixel MSE vs <span class="mono">x&#8320;</span>: <span class="mono">${fmt(mp)}</span> &middot; rel.err <span class="mono">${fmt(rp)}</span></span>`;
-
-    window.diffusionShared._lastReverse = {
-      kind: 'random',
-      rev2D: x0r_2D, revMn: x0r_mn,
-      mse2D: m2, msePix: mp, rel2D: r2, relPix: rp
-    };
-  }
-
   // Reverse with aggregate ε̂ AND with z chosen to recover x_{t-1} exactly.
   // We feed ε̂_t = aggregate ε̄_t = (x_t − √ᾱ_t·x_0)/√(1−ᾱ_t), then pick
   // z_t = (x_{t-1}_forward − μ_θ)/√β_t  so that the DDPM reverse-step lands
@@ -451,22 +434,18 @@ window.scenes.scene4 = function (root) {
   }
 
   // ---- Step engine --------------------------------------------------------
+  // Two cursors only:
+  //   0 — show x_T noise + the formula + the why-not callout.
+  //   1 — bookkept ε run (perfect recovery), closing caption appears.
   let cursor = 0;
-  const STEPS = 3;
+  const STEPS = 2;
 
   function applyStep(c) {
     if (c === 0) {
       paintInitial();
-      btnA.classList.remove('s4-arm-pulse');
       btnB.classList.remove('s4-arm-pulse');
       closing.classList.remove('visible');
     } else if (c === 1) {
-      btnA.classList.add('s4-arm-pulse');
-      btnB.classList.remove('s4-arm-pulse');
-      runRandom();
-      closing.classList.remove('visible');
-    } else if (c === 2) {
-      btnA.classList.remove('s4-arm-pulse');
       btnB.classList.add('s4-arm-pulse');
       runBookkept();
       closing.classList.add('visible');
@@ -487,14 +466,10 @@ window.scenes.scene4 = function (root) {
   }
 
   // ---- Event wiring -------------------------------------------------------
-  btnA.addEventListener('click', () => {
-    runRandom();
-    if (cursor < 1) cursor = 1;
-  });
   btnB.addEventListener('click', () => {
     runBookkept();
     closing.classList.add('visible');
-    if (cursor < 2) cursor = 2;
+    if (cursor < 1) cursor = 1;
   });
 
   // ---- Init ----------------------------------------------------------------
@@ -504,11 +479,9 @@ window.scenes.scene4 = function (root) {
   function shouldAutoRunAll() { return /[#&?]runAll\b/.test(window.location.hash || ''); }
   function shouldAutoRun()    { return /[#&?]run\b/.test(window.location.hash || ''); }
 
-  // Auto-run from cold-build (the scene engine only calls onEnter on revisit;
-  // we still want headless screenshots to reach cursor 1/2 on first load).
-  if (shouldAutoRunAll()) {
-    setTimeout(() => setCursor(2), 80);
-  } else if (shouldAutoRun()) {
+  // Auto-run from cold-build: headless &run / &runAll lands on cursor 1
+  // (bookkept recovery), which is the only "result" cursor now.
+  if (shouldAutoRunAll() || shouldAutoRun()) {
     setTimeout(() => setCursor(1), 80);
   }
 
@@ -517,9 +490,7 @@ window.scenes.scene4 = function (root) {
       rebuildBookkept();
       cursor = 0;
       applyStep(0);
-      if (shouldAutoRunAll()) {
-        setTimeout(() => setCursor(2), 80);
-      } else if (shouldAutoRun()) {
+      if (shouldAutoRunAll() || shouldAutoRun()) {
         setTimeout(() => setCursor(1), 80);
       }
     },
