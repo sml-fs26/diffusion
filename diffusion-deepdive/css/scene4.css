@@ -1,19 +1,25 @@
 /* Scene 4 — Reverse, wishful thinking. The pedagogical climax.
    Single-column hero, max 960px, centred. */
 
-.scene[data-scene="4"] { padding: 16px 24px 16px 24px; overflow: auto; }
+/* overflow-y: auto so content scrolls *within* the .scene container if the
+ * viewport is shorter than the content. The page itself never scrolls
+ * (html/body have overflow: hidden), so this scroll is bounded — it cannot
+ * push content above the .scene's top edge into the topbar zone. */
+.scene[data-scene="4"] { padding: 18px 24px 14px 24px; overflow-y: auto; overflow-x: hidden; }
 
+/* Block layout instead of flex — .s4-hero is a max-width-bounded block
+ * centered with margin: 0 auto. Eliminates the flex-item shrinking that
+ * was pushing content above the .scene's top boundary. */
 .scene-s4 {
   width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  min-height: 100%;
+  display: block;
 }
 
 .s4-hero {
   width: 100%;
   max-width: 960px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -261,12 +267,29 @@
 
 @media (max-height: 820px) {
   .s4-bigbtn { height: 58px; width: 230px; }
-  .s4-svg-2d { width: 240px; height: 240px; }
-  .s4-pane-2d { width: 260px; }
+  .s4-svg-2d { width: 220px; height: 220px; }
+  .s4-pane-2d { width: 240px; }
   .s4-pane-mn { width: 150px; }
   .s4-mnist-canvas { width: 132px; height: 132px; }
   .s4-whynot { padding: 8px 12px; }
   .s4-whynot-body { font-size: 12px; }
+  .s4-formula { padding: 8px 14px 10px; }
+  .s4-formula .katex-display { font-size: 0.86em; }
+  .s4-hero { gap: 6px; }
+}
+
+/* Narrower than the lecture-projector default. */
+@media (max-width: 1400px) {
+  .s4-hero { max-width: 880px; }
+  .s4-bigbtn { width: 240px; height: 60px; }
+  .s4-svg-2d { width: 220px; height: 220px; }
+  .s4-pane-2d { width: 240px; }
+  .s4-pane-mn { width: 150px; }
+  .s4-mnist-canvas { width: 132px; height: 132px; }
+  .s4-whynot { padding: 8px 12px; max-width: 720px; }
+  .s4-whynot-body { font-size: 12.5px; line-height: 1.45; }
+  .s4-formula { padding: 8px 14px 10px; }
+  .s4-formula .katex-display { font-size: 0.88em; }
 }
 
 @media (max-width: 980px) {

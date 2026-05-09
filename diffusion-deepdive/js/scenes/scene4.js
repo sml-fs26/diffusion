@@ -48,10 +48,8 @@ window.scenes.scene4 = function (root) {
   hero.className = 's4-hero';
   root.appendChild(hero);
 
-  const eyebrow = document.createElement('div');
-  eyebrow.className = 's4-eyebrow';
-  eyebrow.textContent = 'The reverse step';
-  hero.appendChild(eyebrow);
+  // Eyebrow removed — the topbar's "Reverse — wishful thinking" title already
+  // names the scene; a second header burns vertical space without adding info.
 
   const formulaBlock = document.createElement('div');
   formulaBlock.className = 's4-formula';
@@ -479,10 +477,16 @@ window.scenes.scene4 = function (root) {
   function shouldAutoRunAll() { return /[#&?]runAll\b/.test(window.location.hash || ''); }
   function shouldAutoRun()    { return /[#&?]run\b/.test(window.location.hash || ''); }
 
+  // Defeat the scene-engine 400 ms fade-in for headless capture.
+  function paintFinal() {
+    root.style.transition = 'none';
+    root.style.opacity = 1;
+  }
+
   // Auto-run from cold-build: headless &run / &runAll lands on cursor 1
   // (bookkept recovery), which is the only "result" cursor now.
   if (shouldAutoRunAll() || shouldAutoRun()) {
-    setTimeout(() => setCursor(1), 80);
+    setTimeout(() => { setCursor(1); paintFinal(); }, 80);
   }
 
   return {
@@ -491,7 +495,7 @@ window.scenes.scene4 = function (root) {
       cursor = 0;
       applyStep(0);
       if (shouldAutoRunAll() || shouldAutoRun()) {
-        setTimeout(() => setCursor(1), 80);
+        setTimeout(() => { setCursor(1); paintFinal(); }, 80);
       }
     },
     onLeave() { /* no cleanup needed */ },

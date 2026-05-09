@@ -1,21 +1,23 @@
-/* Scene 3 — The shortcut. Two equal columns: iterative vs fast-forward. */
+/* Scene 3 — The shortcut. Two equal columns: iterative vs fast-forward.
+ * Block layout with overflow-y: auto so content scrolls *within* .scene if
+ * the viewport is short — bounded scroll, never pushes under the topbar. */
 
-.scene[data-scene="3"] { padding: 22px 32px 24px 32px; overflow: auto; }
+.scene[data-scene="3"] { padding: 18px 28px 14px 28px; overflow-y: auto; overflow-x: hidden; }
 
 .scene-s3 {
   width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
+  min-height: 100%;
+  display: block;
 }
 
 .s3-wrap {
   width: 100%;
-  max-width: 1280px;
+  max-width: 1180px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+  min-width: 0;
 }
 
 .s3-header {
@@ -242,12 +244,21 @@
 
 /* Compact mode for shorter viewports. */
 @media (max-height: 820px) {
-  .s3-svg { width: 300px; height: 300px; }
-  .s3-mnist { width: 100px; height: 100px; }
+  .s3-svg { width: 280px; height: 280px; }
+  .s3-mnist { width: 96px; height: 96px; }
   .s3-formula { padding: 8px 10px; }
   .s3-formula .katex-display { font-size: 0.88em; }
   .s3-col { padding: 10px; gap: 8px; }
   .s3-wrap { gap: 10px; }
+}
+
+/* Narrower than the lecture-projector default. Shrink panes so the two
+ * columns fit side by side without horizontal overflow. */
+@media (max-width: 1400px) {
+  .s3-svg { width: 260px; height: 260px; }
+  .s3-mnist { width: 88px; height: 88px; }
+  .s3-panes { gap: 10px; }
+  .s3-formula .katex-display { font-size: 0.85em; }
 }
 
 @media (max-width: 1100px) {
