@@ -33,7 +33,12 @@ window.scenes.scene5 = function (root) {
 
   const T          = DATA.T;
   const SEED       = 7;
-  const HIDDEN     = 64;
+  // Match the shipped 2D model's architecture (precompute/train_2d_mlp.js)
+  // so the vector field a student sees develop here matches the model that
+  // drives generation in scene 6. Was 64; the smaller net plateaued before
+  // capturing M-aware structure at low t and the field looked qualitatively
+  // different from scene 6's behaviour.
+  const HIDDEN     = 128;
   const LR         = 2e-3;
   const BATCH_SIZE = 64;
   const GRID_N     = 16;            // 16×16 grid of arrows
