@@ -138,6 +138,49 @@ window.scenes.scene2 = function (root) {
   tagline.innerHTML = '<em>Two hundred steps. From M to noise.</em>';
   textCol.appendChild(tagline);
 
+  // Notation block — define every symbol that the curves and the formulas
+  // in later scenes rely on, before the student first sees them.
+  const notation = document.createElement('div');
+  notation.className = 's2-notation';
+  textCol.appendChild(notation);
+
+  const notationTitle = document.createElement('div');
+  notationTitle.className = 's2-notation-title';
+  notationTitle.textContent = 'Notation';
+  notation.appendChild(notationTitle);
+
+  const notationDefs = document.createElement('div');
+  notationDefs.className = 's2-notation-defs';
+  notation.appendChild(notationDefs);
+
+  const NOTATION_LINES = [
+    { tex: '\\beta_t \\in [0, 1]',
+      gloss: 'noise schedule (the DDPM hyperparameter)' },
+    { tex: '\\alpha_t \\;=\\; 1 - \\beta_t',
+      gloss: 'signal weight retained at one step' },
+    { tex: '\\bar\\alpha_t \\;=\\; \\textstyle\\prod_{s\\le t}\\alpha_s',
+      gloss: 'signal retained from x₀ to x_t' },
+    { tex: '\\varepsilon_t \\sim \\mathcal{N}(0, I)',
+      gloss: 'standard Gaussian noise' },
+  ];
+  for (const def of NOTATION_LINES) {
+    const row = document.createElement('div');
+    row.className = 's2-notation-row';
+    const sym = document.createElement('span');
+    sym.className = 's2-notation-sym';
+    try {
+      katex.render(def.tex, sym, { throwOnError: false, displayMode: false });
+    } catch (e) {
+      sym.textContent = def.tex;
+    }
+    const gloss = document.createElement('span');
+    gloss.className = 's2-notation-gloss';
+    gloss.textContent = def.gloss;
+    row.appendChild(sym);
+    row.appendChild(gloss);
+    notationDefs.appendChild(row);
+  }
+
   // Time panel — counter + chart
   const timePanel = document.createElement('div');
   timePanel.className = 's2-time-panel';

@@ -42,10 +42,25 @@ window.scenes.scene3 = function (root) {
   title.textContent = 'Same destination, two paths.';
   header.appendChild(title);
 
+  // Subtitle: KaTeX-rendered, with the two formulas inline so the equivalence
+  // claim names them explicitly. Escaped `\\` for the JS string literal.
   const sub = document.createElement('p');
   sub.className = 's3-sub';
-  sub.innerHTML = 'Iterating <span class="cluster-1">x<sub>t+1</sub> = √(1−β<sub>t</sub>) x<sub>t</sub> + √β<sub>t</sub> ε<sub>t</sub></span> for <em>t</em> steps lands on the same distribution as one shot through <span class="cluster-4">x<sub>t</sub> = √ᾱ<sub>t</sub> x<sub>0</sub> + √(1−ᾱ<sub>t</sub>) ε̂</span>. Compute is the only thing that differs.';
   header.appendChild(sub);
+  try {
+    sub.innerHTML = '';
+    const ITERATIVE_TEX = '\\textcolor{#2f6cb1}{x_{t+1} = \\sqrt{1-\\beta_t}\\,x_t + \\sqrt{\\beta_t}\\,\\varepsilon_t}';
+    const FAST_TEX      = '\\textcolor{#7a5c8c}{x_t = \\sqrt{\\bar\\alpha_t}\\,x_0 + \\sqrt{1-\\bar\\alpha_t}\\,\\hat\\varepsilon}';
+    const a = document.createElement('span'); sub.appendChild(document.createTextNode('Iterating '));
+    sub.appendChild(a);
+    katex.render(ITERATIVE_TEX, a, { throwOnError: false, displayMode: false, trust: true });
+    sub.appendChild(document.createTextNode(' for t steps lands on the same distribution as one shot through '));
+    const b = document.createElement('span'); sub.appendChild(b);
+    katex.render(FAST_TEX, b, { throwOnError: false, displayMode: false, trust: true });
+    sub.appendChild(document.createTextNode('. Compute is the only thing that differs.'));
+  } catch (e) {
+    sub.textContent = 'Iterating x_{t+1} = √(1−β_t)x_t + √β_t·ε_t for t steps lands on the same distribution as one shot through x_t = √ᾱ_t x_0 + √(1−ᾱ_t)·ε̂.';
+  }
 
   // Split layout: two columns
   const split = document.createElement('div');

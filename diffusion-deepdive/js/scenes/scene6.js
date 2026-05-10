@@ -198,19 +198,31 @@ window.scenes.scene6 = function (root) {
   /* ----- 2D model setup -------------------------------------------------- */
 
   function ensureTwoDModel() {
-    // Prefer the trained model from scene 5.
-    if (window.diffusionShared && window.diffusionShared.twoDModel) {
-      state.twoDModel = window.diffusionShared.twoDModel;
+    // Reuse the trained model from scene 5 if it's already at our target
+    // step count. If scene 5 stopped early (e.g. user pressed → twice
+    // quickly, only 1500 steps in the bag), we keep training the SAME
+    // instance here until we reach COLD_BURST. Otherwise, we'd be using
+    // a half-trained model and the M never emerges in the reverse pass.
+    let m = (window.diffusionShared && window.diffusionShared.twoDModel)
+              ? window.diffusionShared.twoDModel : null;
+    if (m && m.step >= COLD_BURST) {
+      state.twoDModel = m;
       return Promise.resolve();
     }
-    // Cold path — train a 200-step burst here.
+
     warmOverlay.classList.remove('s6-hidden');
     return new Promise(resolve => {
       // Defer to next frame so the overlay paints before we block.
       requestAnimationFrame(() => {
-        const m = new NN.TwoDModel({ hidden: HIDDEN, lr: LR, seed: SEED_TRAIN });
-        const rng = M.mulberry32(SEED_TRAIN + 9001);
-        for (let s = 0; s < COLD_BURST; s++) {
+        if (!m) {
+          m = new NN.TwoDModel({ hidden: HIDDEN, lr: LR, seed: SEED_TRAIN });
+        }
+        // RNG seed depends on m.step so we don't replay the same training
+        // batches across resumes. (mulberry32 is stateless given a seed,
+        // and the extra offset effectively forks the sequence.)
+        const rng = M.mulberry32(SEED_TRAIN + 9001 + m.step);
+        const stepsToGo = Math.max(0, COLD_BURST - m.step);
+        for (let s = 0; s < stepsToGo; s++) {
           const batch = NN.sample2DBatch(DATA.letterM.points, DATA.alphaBars, BATCH_SIZE, rng);
           m.trainBatch(batch);
         }

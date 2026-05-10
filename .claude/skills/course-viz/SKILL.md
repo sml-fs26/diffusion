@@ -313,6 +313,71 @@ In a JS string literal, `\\` produces a single `\` for KaTeX. Use `\mathrm{name}
 
 KaTeX uses `currentColor` for most rules — automatically theme-aware via the surrounding element's `color` property.
 
+## Math: render every formula in KaTeX, define every symbol
+
+Two hard rules. Both are easy to violate by accident; both are visible in any screenshot review and either are caught upfront or are caught later by a confused student.
+
+### 1. Every formula renders in KaTeX, not in HTML pseudo-math
+
+HTML's `<sub>`, `<sup>`, and Unicode math glyphs (`β`, `√`, `ᾱ`, `ε̂`) are *labels*, not typesetting. They look fine inline at small scale and look amateur the moment they sit next to a real KaTeX equation in the same page — different fonts, different baselines, different italicization. A student reads "the formulas in this viz are inconsistent" before they read the math.
+
+Use KaTeX for:
+- Any **displayed equation** (formula blocks, hero formulas in scene headers).
+- Any **inline reference that names a symbol with subscripts, fractions, square roots, hats, bars, or accents** — e.g. `x_t`, `\bar\alpha_t`, `\sqrt{1-\beta_t}`, `\hat\varepsilon`. These belong in `katex.render(..., { displayMode: false })`.
+
+HTML markup is fine for:
+- Plain prose mentions of a symbol *as a name*, not as part of an expression — e.g. `<em>β</em>` in "The β slider sets one number".
+- Chart axis labels and legends where a SVG `<text>` element is the natural host. (KaTeX-in-SVG is brittle.)
+- Tabular numerics next to a KaTeX-rendered symbol.
+
+Rendering pattern for inline KaTeX in mid-sentence (this is the clean way):
+
+```js
+const p = document.createElement('p');
+p.appendChild(document.createTextNode('A small MLP learns the mapping '));
+const formula = document.createElement('span');
+p.appendChild(formula);
+katex.render('(x_t,\\,t) \\;\\to\\; \\hat\\varepsilon', formula,
+  { throwOnError: false, displayMode: false });
+p.appendChild(document.createTextNode('. The recipe is one line.'));
+```
+
+Avoid `innerHTML = '...<sub>t</sub>...'` for anything that's mathematical.
+
+### 2. Every symbol the viz uses is defined somewhere visible
+
+If a formula contains a symbol the student hasn't seen defined, the formula is ornamental, not informative. The first scene that introduces a new symbol must either define it inline (in the surrounding prose) or reference a notation block earlier in the viz.
+
+The cheap, durable approach is a **notation block**: a small panel near the start of whichever scene first uses the symbols, listing each symbol on its own row with an italic gloss. The diffusion deep-dive's scene 2 has one — it defines `β_t`, `α_t = 1 − β_t`, `ᾱ_t = ∏α_s`, `ε ~ N(0, I)` before any later scene puts them in a hero formula.
+
+Pattern:
+
+```js
+const NOTATION_LINES = [
+  { tex: '\\beta_t \\in [0, 1]',
+    gloss: 'noise schedule (the DDPM hyperparameter)' },
+  { tex: '\\alpha_t \\;=\\; 1 - \\beta_t',
+    gloss: 'signal weight retained at one step' },
+  { tex: '\\bar\\alpha_t \\;=\\; \\textstyle\\prod_{s\\le t}\\alpha_s',
+    gloss: 'signal retained from x₀ to x_t' },
+  { tex: '\\varepsilon \\sim \\mathcal{N}(0, I)',
+    gloss: 'standard Gaussian noise' },
+];
+// Each row: KaTeX-rendered symbol on the left, italic prose on the right.
+```
+
+Style: italic muted serif for the gloss (matches `.callout-title`), tabular numerics for the symbol column, a small panel border (`1px solid var(--rule)`).
+
+### Audit before reporting done
+
+When the viz uses any non-trivial math, write a one-line audit:
+- "Every formula I display is rendered by `katex.render`."
+- "Every symbol that appears in any formula is defined somewhere a student can find — either inline at first use, or in a notation block."
+
+If you can't write both lines, the viz isn't ready.
+
+(Real story: the diffusion-deepdive shipped scene 4's hero formula `x_{t-1} = (1/√α_t)(x_t - β_t/√(1-ᾱ_t)·ε_t) + √β_t·z` correctly KaTeX-rendered, but `ᾱ_t` was never defined anywhere in the viz. A student looking at scene 4 had no anchor for what the bar meant. The fix was a four-line notation block in scene 2; the bug was that nobody had written the audit out loud before declaring the viz done.)
+
 ## Voice and language
 
 All UI strings, prose, captions, labels, and formula descriptions in **English**, even when the course is taught in another language. The slide deck may be bilingual; the visualizations are English-only for portability.

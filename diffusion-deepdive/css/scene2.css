@@ -160,9 +160,52 @@
   color: var(--muted);
   font-family: "Iowan Old Style", "Palatino", Georgia, serif;
   font-size: 14px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 .s2-tagline em { font-style: italic; }
+
+/* Notation block — the contract for every symbol in the curves below and in
+ * the formulas of scenes 3–6. KaTeX rendered, gloss in italic muted serif. */
+.s2-notation {
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+.s2-notation-title {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.s2-notation-defs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.s2-notation-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.s2-notation-sym {
+  flex: 0 0 auto;
+  min-width: 76px;
+  text-align: right;
+}
+.s2-notation-sym .katex { font-size: 1.0em; }
+.s2-notation-gloss {
+  font-family: "Iowan Old Style", "Palatino", Georgia, serif;
+  font-style: italic;
+  color: var(--muted);
+  font-size: 13px;
+}
 
 /* ---- Time panel: counter + chart -------------------------------------- */
 

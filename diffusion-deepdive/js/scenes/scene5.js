@@ -174,7 +174,14 @@ window.scenes.scene5 = function (root) {
 
   const subhead = document.createElement('p');
   subhead.className = 's5-subhead';
-  subhead.innerHTML = 'A small MLP learns the mapping <code>(x<sub>t</sub>, t) → &epsilon;&#770;</code>. The recipe is one line.';
+  subhead.innerHTML = 'A small MLP learns the mapping ';
+  const mapTex = document.createElement('span');
+  subhead.appendChild(mapTex);
+  try {
+    katex.render('(x_t,\\,t) \\;\\to\\; \\hat\\varepsilon', mapTex,
+      { throwOnError: false, displayMode: false });
+  } catch (e) { mapTex.textContent = '(x_t, t) → ε̂'; }
+  subhead.appendChild(document.createTextNode('. The recipe is one line.'));
   rightCol.appendChild(subhead);
 
   const formulaBlock = document.createElement('div');
@@ -253,7 +260,15 @@ window.scenes.scene5 = function (root) {
 
   const closing = document.createElement('p');
   closing.className = 'muted s5-closing s5-hidden';
-  closing.innerHTML = "<em>That&rsquo;s it.</em> &epsilon;&#770; = NN(x<sub>t</sub>, t). The next scene puts it to work.";
+  // KaTeX-render the inline formula so ε̂ and x_t typeset cleanly.
+  closing.innerHTML = "<em>That&rsquo;s it.</em> ";
+  const closingTex = document.createElement('span');
+  closing.appendChild(closingTex);
+  try {
+    katex.render('\\hat\\varepsilon = \\mathrm{NN}(x_t, t)', closingTex,
+      { throwOnError: false, displayMode: false });
+  } catch (e) { closingTex.textContent = 'ε̂ = NN(x_t, t)'; }
+  closing.appendChild(document.createTextNode('. The next scene puts it to work.'));
   rightCol.appendChild(closing);
 
   /* ----- KaTeX renders ---------------------------------------------------- */
