@@ -141,26 +141,39 @@ window.DiffusionNN = (function () {
   // Loss: 0.5 ‖ε̂ − ε‖² (MSE).
   // Optimizer: Adam.
   class TwoDModel {
+    // opts:
+    //   { hidden, lr, seed }                          fresh model (random init)
+    //   { weights: { W1,b1,W2,b2,W3,b3 }, hidden? }   load pre-trained weights
     constructor(opts) {
       opts = opts || {};
-      this.H = opts.hidden || 64;
       this.lr = opts.lr || 2e-3;
       this.seed = opts.seed || 7;
       this._rng = DiffusionMath.mulberry32(this.seed);
 
-      this.W1 = this._heInit(this.H, 3);
-      this.b1 = new Float32Array(this.H);
-      this.W2 = this._heInit(this.H, this.H);
-      this.b2 = new Float32Array(this.H);
-      this.W3 = this._heInit(2, this.H);
-      this.b3 = new Float32Array(2);
+      if (opts.weights) {
+        // Load mode — infer hidden from W1 shape: W1 is (H × 3), flat row-major.
+        const W = opts.weights;
+        this.H = (W.W1.length / 3) | 0;
+        this.W1 = new Float32Array(W.W1); this.b1 = new Float32Array(W.b1);
+        this.W2 = new Float32Array(W.W2); this.b2 = new Float32Array(W.b2);
+        this.W3 = new Float32Array(W.W3); this.b3 = new Float32Array(W.b3);
+        this.step = (opts.step | 0) || 0;
+      } else {
+        this.H = opts.hidden || 64;
+        this.W1 = this._heInit(this.H, 3);
+        this.b1 = new Float32Array(this.H);
+        this.W2 = this._heInit(this.H, this.H);
+        this.b2 = new Float32Array(this.H);
+        this.W3 = this._heInit(2, this.H);
+        this.b3 = new Float32Array(2);
+        this.step = 0;
+      }
 
       this._adam = {
         W1: this._adamSlot(this.W1), b1: this._adamSlot(this.b1),
         W2: this._adamSlot(this.W2), b2: this._adamSlot(this.b2),
         W3: this._adamSlot(this.W3), b3: this._adamSlot(this.b3)
       };
-      this.step = 0;
       this.lossHistory = [];
     }
 

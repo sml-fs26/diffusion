@@ -378,6 +378,48 @@ If you can't write both lines, the viz isn't ready.
 
 (Real story: the diffusion-deepdive shipped scene 4's hero formula `x_{t-1} = (1/√α_t)(x_t - β_t/√(1-ᾱ_t)·ε_t) + √β_t·z` correctly KaTeX-rendered, but `ᾱ_t` was never defined anywhere in the viz. A student looking at scene 4 had no anchor for what the bar meant. The fix was a four-line notation block in scene 2; the bug was that nobody had written the audit out loud before declaring the viz done.)
 
+## Models the viz claims to "produce" — pre-train offline, ship the weights, verify automatically
+
+When the viz claims to do something visible with a neural network ("the trained NN denoises the image", "the reverse process produces a letter M"), in-browser training is **always** the wrong way to drive that claim. Two reasons:
+
+1. **Pedagogy and quality are different problems.** Showing live training in scene N is great pedagogy ("watch the loss drop, watch the vector field develop"), but the *model that drives the visible payoff in scene N+1* should not depend on how long the user trained or which RNG seed they got. The scene-N model is a demo; the scene-N+1 model is the contract.
+2. **Browser CPU budgets lie about quality.** "It looks fine in headless at 3000 steps" hides "the user navigates from scene 5 with a 1500-step early-stop and gets a blob."
+
+The recipe:
+
+- **Pre-train offline** (Node or Python; pin the seed) with a budget the browser can't afford — orders of magnitude more steps, deeper architecture if helpful. Save weights to `precompute/_artifacts/<name>_model.json`.
+- **Inline the weights into `data/datasets.js`** via the build script. The runtime reads `DATA.<name>Model.weights` and instantiates the same architecture.
+- **Keep live in-scene training as a separate, optional, decorative thing.** Scene 5 of the diffusion deep-dive still trains a fresh small MLP live (it's the lesson). Scene 6 ignores that and uses the shipped weights — guaranteeing a clean letter-M every time.
+- **Write an automated visual-quality assertion as a build gate.** Not a screenshot to look at — a script that runs the deployed model end-to-end and computes a numeric metric, then `process.exit(1)` if the metric falls outside the target band. Every commit / "I'm done" claim must run this gate.
+
+Example gate (from `precompute/verify_2d_M.js`):
+
+```js
+const THRESHOLD = 0.07;
+const SEEDS     = [12345, 99, 777, 31415, 271828, 1234, 4242];
+
+let worst = 0;
+for (const seed of SEEDS) {
+  const x = reverseTrajectoryFromShippedModel(seed);
+  const nn = meanNearest(x, DATA.letterM.points);
+  if (nn > worst) worst = nn;
+  console.log(`  seed=${seed}: mean nearest-letterM dist = ${nn.toFixed(4)}  ${nn <= THRESHOLD ? 'PASS' : 'FAIL'}`);
+}
+if (worst > THRESHOLD) {
+  console.error('INVARIANT FAIL'); process.exit(1);
+}
+```
+
+The metric must be **specific to the visual claim**: "a generated point lies within ε of the data manifold" rather than "the loss is low" — a low loss often co-exists with bad generation. The viz's own contract with the student decides what to assert.
+
+### Why this matters
+
+The user-facing failure mode is the worst kind: the viz *runs*, *renders*, *doesn't crash*. The agent's screenshot looks plausible. Only when a real student or lecturer opens it, navigates differently, and the unit doesn't perform — that's when the bug surfaces. By that point the agent's "I verified it" claim has already been made.
+
+A numeric gate moves the verification from "I looked at the picture" (subjective, easily wrong) to "the script said 0.047 < 0.07" (objective). The agent runs the gate before declaring done; failures fail loud.
+
+(Real story: the diffusion-deepdive's scene 6 spent three iterations failing to reliably produce a letter M. The screenshot taken with `&run` always passed because that path ran a 3000-step cold-burst directly; the user's actual flow — navigating from scene 5, which saved an under-trained model to shared state — gave a 1500-step model and the M never emerged. The fix that *worked* was: pre-train an 8000-step model in Node, ship the weights, write `verify_2d_M.js` that fails the build above 0.07 mean nearest-data distance. After that, the M appears every single time.)
+
 ## Voice and language
 
 All UI strings, prose, captions, labels, and formula descriptions in **English**, even when the course is taught in another language. The slide deck may be bilingual; the visualizations are English-only for portability.

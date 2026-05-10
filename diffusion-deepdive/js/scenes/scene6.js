@@ -198,37 +198,26 @@ window.scenes.scene6 = function (root) {
   /* ----- 2D model setup -------------------------------------------------- */
 
   function ensureTwoDModel() {
-    // Reuse the trained model from scene 5 if it's already at our target
-    // step count. If scene 5 stopped early (e.g. user pressed → twice
-    // quickly, only 1500 steps in the bag), we keep training the SAME
-    // instance here until we reach COLD_BURST. Otherwise, we'd be using
-    // a half-trained model and the M never emerges in the reverse pass.
-    let m = (window.diffusionShared && window.diffusionShared.twoDModel)
-              ? window.diffusionShared.twoDModel : null;
-    if (m && m.step >= COLD_BURST) {
-      state.twoDModel = m;
+    // PRIMARY path: instantiate the pre-trained 2D MLP shipped in DATA.
+    // This decouples scene 6 from however far scene 5's live training got —
+    // the demo is for pedagogy, not for driving generation. Verified offline
+    // (precompute/verify_2d_M.js) to give recognisable Ms across seeds.
+    if (DATA.twoDModel && DATA.twoDModel.weights) {
+      state.twoDModel = new NN.TwoDModel({ weights: DATA.twoDModel.weights });
       return Promise.resolve();
     }
-
+    // Fallback (only if a build is missing the shipped weights, which the
+    // build_data.py invariants forbid): fresh in-browser cold-burst.
     warmOverlay.classList.remove('s6-hidden');
     return new Promise(resolve => {
-      // Defer to next frame so the overlay paints before we block.
       requestAnimationFrame(() => {
-        if (!m) {
-          m = new NN.TwoDModel({ hidden: HIDDEN, lr: LR, seed: SEED_TRAIN });
-        }
-        // RNG seed depends on m.step so we don't replay the same training
-        // batches across resumes. (mulberry32 is stateless given a seed,
-        // and the extra offset effectively forks the sequence.)
-        const rng = M.mulberry32(SEED_TRAIN + 9001 + m.step);
-        const stepsToGo = Math.max(0, COLD_BURST - m.step);
-        for (let s = 0; s < stepsToGo; s++) {
+        const m = new NN.TwoDModel({ hidden: HIDDEN, lr: LR, seed: SEED_TRAIN });
+        const rng = M.mulberry32(SEED_TRAIN + 9001);
+        for (let s = 0; s < COLD_BURST; s++) {
           const batch = NN.sample2DBatch(DATA.letterM.points, DATA.alphaBars, BATCH_SIZE, rng);
           m.trainBatch(batch);
         }
         state.twoDModel = m;
-        window.diffusionShared.twoDModel = m;
-        window.diffusionShared.lossHistory = m.lossHistory.slice();
         warmOverlay.classList.add('s6-hidden');
         resolve();
       });

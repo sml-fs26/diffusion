@@ -101,7 +101,19 @@ def build_datasets_js() -> str:
         sys.exit(f"missing {unet_traj_path}; run train_mnist_unet.py then build_unet_trajectories.py")
     with open(unet_traj_path) as f:
         trajs = json.load(f)
-    print(f"[4/4] UNet trajectories: {len(trajs)} × {len(trajs[0]['snapshots'])} snapshots")
+    print(f"[4/5] UNet trajectories: {len(trajs)} × {len(trajs[0]['snapshots'])} snapshots")
+
+    # 2D MLP — pre-trained weights for the letter-M denoiser, shipped as data
+    # so scene 6's "Generate" doesn't depend on (and can't be hurt by) how
+    # much the user trained scene 5. See precompute/train_2d_mlp.js.
+    twoD_path = ART_DIR / "twoD_model.json"
+    if not twoD_path.exists():
+        sys.exit(f"missing {twoD_path}; run `node precompute/train_2d_mlp.js`")
+    with open(twoD_path) as f:
+        twoD = json.load(f)
+    print(f"[5/5] 2D MLP: hidden={twoD['architecture']['hidden']} "
+          f"trained={twoD['trainingMeta']['steps']} steps "
+          f"evalNN={twoD['trainingMeta']['evalNN']:.4f}")
 
     # ----- assertions ---------------------------------------------------------
     print("\nAsserting invariants …")
@@ -243,7 +255,21 @@ def build_datasets_js() -> str:
             pix = ",".join(f32_str(p) for p in snap["pixels"])
             parts.append(f"      {{t: {snap['t']}, pixels: [{pix}]}},\n")
         parts.append("    ]},\n")
-    parts.append("  ]\n")
+    parts.append("  ],\n")
+
+    # 2D MLP — pre-trained weights for the letter-M denoiser. Loaded by
+    # scene 6's TwoDModel({weights: ...}) so generation is consistent
+    # regardless of how scene 5's live training went.
+    parts.append("  twoDModel: {\n")
+    parts.append("    architecture: " + json.dumps(twoD["architecture"]) + ",\n")
+    parts.append("    weights: {\n")
+    for key in ["W1", "b1", "W2", "b2", "W3", "b3"]:
+        arr = twoD["weights"][key]
+        flat = ",".join(f32_str(x) for x in arr)
+        parts.append(f"      {key}: [{flat}],\n")
+    parts.append("    },\n")
+    parts.append("    trainingMeta: " + json.dumps(twoD["trainingMeta"]) + "\n")
+    parts.append("  }\n")
 
     parts.append("};\n")
     return "".join(parts)
@@ -291,9 +317,12 @@ if (D.alphas.length !== 200) throw new Error('alphas length wrong');
 if (D.alphaBars.length !== 200) throw new Error('alphaBars length wrong');
 if (D.mnistSamples.length !== 10) throw new Error('mnistSamples length wrong');
 if (D.mnistReferenceTrajectories.length < 8) throw new Error('refTraj length too short');
+if (!D.twoDModel) throw new Error('twoDModel missing');
+if (!D.twoDModel.weights || !D.twoDModel.weights.W1) throw new Error('twoDModel.weights.W1 missing');
 console.log('parse-check OK; T=', D.T, ', samples=', D.mnistSamples.length,
             ', traj=', D.mnistReferenceTrajectories.length,
-            'x', D.mnistReferenceTrajectories[0].snapshots.length, 'snaps');
+            'x', D.mnistReferenceTrajectories[0].snapshots.length, 'snaps,',
+            '2D-MLP hidden=', D.twoDModel.architecture.hidden);
 """
     res = subprocess.run(
         ["node", "-e", script, str(path)],
