@@ -167,9 +167,33 @@ This is a **dev affordance, not a user feature** — the button stays the canoni
 
 If a scene has multiple gated buttons (e.g. "Train" then "Predict"), `&run` triggers only the **primary** one — the most visually prominent button, usually labelled "Run", "Go", or with a play icon. For multi-step playthrough use a separate `&runAll` flag that walks every gated button in order. Don't overload `&run`; it should mean "get me past the obvious gate."
 
-## Step engine (within-scene Next button)
+## Within-scene interaction: direct first, staged only when necessary
 
-Many scenes have an internal step counter:
+Every scene needs a way for the student to drive it. There are two patterns. **Pick the simplest one that fits the lesson.**
+
+### Direct interaction is the default
+
+A scene has one or more **always-live** controls — a slider, a button, a toggle, a digit selector. The student drags / clicks / picks; the scene re-renders from the resulting state. No cursor, no forced order, no internal Prev/Next within the scene (those move *between* scenes).
+
+This is the right pattern when the lesson is a *relationship* the student probes by varying parameters:
+
+- "One forward step" → β slider + a Step button. Single state.
+- "All the way to chaos" → t-slider over the full schedule. Single state.
+- "The shortcut" → t-slider + seed input; iterative cloud animates, fast-forward arrives instantly. Single state.
+
+### A within-scene step engine is an option, not a preference
+
+It is a tool in the toolbox: **considered and used if it makes sense, but never aimed for.** A scene gets a step engine only when the lesson IS the sequence — when the staging is the load-bearing pedagogical move and the alternative (single-state direct interaction) genuinely loses meaning. Concretely:
+
+- A derivation whose punchline depends on prior reveals.
+- An algorithm trace where step k must follow step k-1 (the canonical k-means scenes — assign → update → check — are this).
+- A dramatic reveal whose payoff requires buildup ("here's the formula" → "here's why we need ε" is a justified two-cursor case).
+
+If the question *"could this scene be one continuous control with a single state?"* has the answer *"yes, and the lesson doesn't suffer"* — make it single-state. Don't go looking for opportunities to add a step engine. Don't ask "what could the cursors be?" — ask "what does the student need to do, and is staging required for them to learn?"
+
+(Real story: the diffusion-deepdive shipped four scenes with internal step engines (1, 2, 3, 5) before user review pointed out that three of them were over-engineered. Each lesson was fully accessible via a slider and a button. The bias came from this skill's prior framing, where the step-engine pattern was documented in detail with no counterpart for direct interaction. Scene 1 got 5 cursors that walked through fade-only / noise-only / combined; the right shape was a slider + a "Step" button. Scene 3 got 4 cursors that walked through t = 0 / 50 / T-1 / equivalence-demo; the right shape was a slider, period.)
+
+### When you have decided staging is required, the step engine looks like this
 
 ```js
 let cursor = 0;
@@ -200,7 +224,7 @@ return {
 };
 ```
 
-**Critical rules:**
+**Critical rules (when you do use a step engine):**
 - **State is the source of truth, animations are decoration.** `render(state)` produces a correct snapshot from scratch.
 - **Prev = rewind via reset+replay.** Don't write inverse mutations. Disable animations during fast-forward.
 - **One DOM action per step.** Resist cramming several visual changes into one click.
@@ -279,8 +303,14 @@ Copy and fill the bracketed fields:
 > **Scene narrative** (the pedagogical arc this scene must deliver):
 > `[3–5 SENTENCES — what the student should understand by the end]`
 >
-> **Step plan** (if multi-step):
-> `[STEP-BY-STEP NARRATIVE]`
+> **Interaction plan.**
+> List the scene's controls (sliders, buttons, toggles, scrubbers). For each, say what it changes and what re-renders. The default is **single-state direct interaction** (no internal step engine — see §Within-scene interaction). Only add a step plan if the lesson genuinely requires forced sequencing — a derivation that depends on prior reveals, an algorithm trace, a dramatic reveal whose payoff needs buildup. If you write a step plan, **justify in one sentence why direct interaction would lose the lesson**.
+>
+> ```
+> Single-state version (preferred): <which controls, what each does>
+> Step plan (only if justified): <cursors and what each reveals>
+> Justification (only if step plan): <why a slider/button can't carry the lesson>
+> ```
 >
 > **Verification.** Parse-check the file, browser-walkthrough in both themes, and headless-screenshot via `--screenshot=...#scene=[N]` (combine with `&run` for animation gates).
 
@@ -489,7 +519,7 @@ The patterns above were extracted from three viz that live in the originating re
 |---|---|
 | Scrollytelling carousel + sticky viz | `congress-story/` |
 | Click-step scene engine + dot pager + hash routing | `kmeans-deepdive/js/main.js` |
-| Internal step engine (math walkthrough) | `kmeans-deepdive/js/scenes/scene4.js` |
+| Internal step engine (math walkthrough) | `kmeans-deepdive/js/scenes/scene4.js` — *justified there because k-means is intrinsically a staged iterative algorithm. See §Within-scene interaction; don't import this pattern reflexively for scenes whose lesson isn't a forced sequence.* |
 | Light/dark theme toggle | `kmeans-deepdive/js/theme.js` |
 | Math utility module (e.g. Lloyd's, Voronoi, k-means++) | `kmeans-deepdive/js/kmeans.js` |
 | Pre-canned data + Node generator + verified invariants | `kmeans-deepdive/precompute/build-datasets.js` |
@@ -727,6 +757,7 @@ Real story (this skill, May 2026): a five-agent fan-out shipped six scenes that 
 
 ## Things to never do
 
+- **Aim for a step engine.** A within-scene cursor system is an option, not a preference — considered and used if the lesson genuinely needs forced staging, never aimed for. The default is single-state direct interaction (slider, button, toggle). If your draft includes cursors and the scene's payoff is reachable by dragging a slider or pressing one button, drop the cursors. See §Within-scene interaction.
 - **Inline cluster/categorical colors** (`fill="#..."` in SVG, `style="color: #..."` in DOM). Use CSS classes (`.cluster-N`, `.voronoi-cell.cluster-N`) so theme switch works.
 - **Inject `<style>` tags from JS.** Write per-scene CSS files, link them in `index.html`.
 - **Auto-run animations on `onEnter`** for interactive scenes (defeats the click-to-think loop). The `&run` hash flag is the *only* exception, and only for headless verification.
