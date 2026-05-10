@@ -197,6 +197,23 @@ svg .s5-data-pt {
   font-size: 13px;
 }
 
+/* Regime labels above the slider track. Tiny mono font so the slider's
+ * track and thumb still read as the primary control. */
+.s5-t-regime-labels {
+  display: flex;
+  justify-content: space-between;
+  font-family: "SF Mono", "Menlo", monospace;
+  font-size: 10.5px;
+  color: var(--muted);
+  margin-top: 2px;
+  padding: 0 2px;
+  letter-spacing: 0.01em;
+}
+.s5-t-regime-low,
+.s5-t-regime-high {
+  font-style: italic;
+}
+
 .s5-t-slider {
   width: 100%;
   appearance: none;

@@ -244,11 +244,21 @@ window.scenes.scene5 = function (root) {
   const lossPath = gChart.append('path')
     .attr('class', 's5-loss-path stroke-cluster-2');
 
-  // t-slider
+  // t-slider with regime labels above the track. The two regimes:
+  //   low t   — M-aware:   x_t is close to data, the model differentiates
+  //                        between regions near and far from the M.
+  //   high t  — radial:    x_t is mostly noise, the optimal ε̂ ≈ x_t,
+  //                        so −ε̂ points at the origin uniformly. Correct
+  //                        but uninteresting; this is *why* reverse takes
+  //                        many steps.
   const tWrap = document.createElement('div');
   tWrap.className = 's5-t-wrap';
   tWrap.innerHTML = `
     <label class="s5-t-caption">View vector field at t = <span data-role="t-val" class="mono">${T - 1}</span></label>
+    <div class="s5-t-regime-labels" aria-hidden="true">
+      <span class="s5-t-regime-low">low t — M-aware</span>
+      <span class="s5-t-regime-high">high t — radial (data destroyed)</span>
+    </div>
     <input type="range" class="s5-t-slider" min="0" max="${T - 1}" step="1" value="${T - 1}" disabled>
   `;
   rightCol.appendChild(tWrap);
