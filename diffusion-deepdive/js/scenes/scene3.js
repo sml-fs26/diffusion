@@ -177,13 +177,11 @@ window.scenes.scene3 = function (root) {
   seedInput.className = 's3-seed-input mono';
   seedCtl.appendChild(seedInput);
 
-  const stepPill = document.createElement('div');
-  stepPill.className = 's3-step-pill';
-  ctlRow.appendChild(stepPill);
-
-  const overlay = document.createElement('div');
-  overlay.className = 's3-overlay-cap';
-  wrap.appendChild(overlay);
+  // No step pill, no equivalence-demo overlay. Scene 3 is a single live
+  // state: drag the t slider, watch the iterative cloud animate (with its
+  // RNG-call counter ticking up) and the fast-forward cloud arrive instantly.
+  // The whole pedagogical point is the comparison; it doesn't need a
+  // multi-step walkthrough.
 
   // ---- Letter-M points (subsampled) --------------------------------------
   const letterPoints = (function () {
@@ -312,7 +310,6 @@ window.scenes.scene3 = function (root) {
   // ---- State --------------------------------------------------------------
   let curT = 0;
   let curSeed = 42;
-  let mode = 'single';       // 'single' (iter+ff for x_0) or 'scatter'
   let leftAnimToken = 0;     // cancellation token for in-progress animations
 
   // ---- Single-mode painters ----------------------------------------------
@@ -487,20 +484,16 @@ window.scenes.scene3 = function (root) {
   }
 
   // ---- Master render ------------------------------------------------------
+  // No mode switch, no cursor — just paint at the current (t, seed). The
+  // `animate` flag controls whether the iterative cloud animates step-by-step
+  // (used on slider release) or paints statically (used during drag).
   function render(animate) {
     tValEl.textContent = String(curT);
-    if (mode === 'scatter') {
-      runScatter(curT, curSeed);
-      return;
-    }
-    leaveScatter();
     if (animate) {
       animateLeft(curT, curSeed);
     } else {
-      // Static paint of left at curT.
       const xt = iterativeForward(x0_2D, curT, curSeed);
       paintCloud(colL.gPoints, xt);
-      // For MNIST also iterate (t may be large but acceptable).
       const xtMn = iterativeForward(x0_mnist, curT, curSeed + 1009);
       paintMnist(colL.canvas, xtMn);
       colL.counterVal.textContent = String(curT);
@@ -509,51 +502,18 @@ window.scenes.scene3 = function (root) {
     paintRight(curT, curSeed);
   }
 
-  // ---- Step engine --------------------------------------------------------
-  let cursor = 0;
-  const STEPS = 4;
-  const STEP_TS = [0, 50, TMAX];
-
-  function applyStep(c, animate) {
-    if (c === 3) {
-      mode = 'scatter';
-      curT = TMAX;
-      tSlider.value = curT;
-      stepPill.textContent = 'Step 4 of 4 — equivalence demo';
-      render(false);
-    } else {
-      mode = 'single';
-      curT = STEP_TS[c];
-      tSlider.value = curT;
-      stepPill.textContent = `Step ${c + 1} of 4 — t = ${curT}`;
-      render(animate);
-    }
-  }
-
-  function setCursor(c, animate) {
-    if (c < 0 || c >= STEPS) return false;
-    cursor = c;
-    applyStep(c, animate);
-    return true;
-  }
-
   // ---- Event wiring -------------------------------------------------------
   tSlider.addEventListener('input', () => {
     curT = parseInt(tSlider.value, 10) || 0;
-    if (mode === 'scatter') {
-      // Re-run scatter at the new t.
-      render(false);
-    } else {
-      tValEl.textContent = String(curT);
-      // Quick paint without animation when the user drags.
-      const xt = iterativeForward(x0_2D, curT, curSeed);
-      paintCloud(colL.gPoints, xt);
-      const xtMn = iterativeForward(x0_mnist, curT, curSeed + 1009);
-      paintMnist(colL.canvas, xtMn);
-      colL.counterVal.textContent = String(curT);
-      colL.noiseVal.textContent = fmt(aggregateNoise(xt, x0_2D, curT));
-      paintRight(curT, curSeed);
-    }
+    tValEl.textContent = String(curT);
+    // Static paint while dragging (no animation — too jittery).
+    const xt = iterativeForward(x0_2D, curT, curSeed);
+    paintCloud(colL.gPoints, xt);
+    const xtMn = iterativeForward(x0_mnist, curT, curSeed + 1009);
+    paintMnist(colL.canvas, xtMn);
+    colL.counterVal.textContent = String(curT);
+    colL.noiseVal.textContent = fmt(aggregateNoise(xt, x0_2D, curT));
+    paintRight(curT, curSeed);
   });
   seedInput.addEventListener('input', () => {
     const v = parseInt(seedInput.value, 10);
@@ -565,44 +525,36 @@ window.scenes.scene3 = function (root) {
 
   // ---- Init ---------------------------------------------------------------
   function init() {
-    cursor = 0;
-    mode = 'single';
     curT = 0;
     curSeed = parseInt(seedInput.value, 10) || 42;
     tSlider.value = 0;
     tValEl.textContent = '0';
-    stepPill.textContent = 'Step 1 of 4 — t = 0';
     render(false);
   }
   init();
 
-  // Auto-advance support: `&run` jumps to cursor 2 (t=T-1), `&runAll` to cursor 3
-  // (the equivalence-demo scatter). Headless screenshot only.
-  function shouldAutoRun()    { return /[#&?]run\b/.test(window.location.hash || ''); }
-  function shouldAutoRunAll() { return /[#&?]runAll\b/.test(window.location.hash || ''); }
-  if (shouldAutoRunAll()) {
-    setTimeout(() => setCursor(3, false), 80);
-  } else if (shouldAutoRun()) {
-    setTimeout(() => setCursor(2, false), 80);
+  // `&run` flag jumps to t = T-1 for headless capture (no cursor system).
+  function shouldAutoRun() { return /[#&?]run(All)?\b/.test(window.location.hash || ''); }
+  if (shouldAutoRun()) {
+    curT = TMAX;
+    tSlider.value = curT;
+    setTimeout(() => render(false), 80);
   }
 
   return {
     onEnter() {
       curSeed = parseInt(seedInput.value, 10) || 42;
       init();
-      if (shouldAutoRunAll()) {
-        setTimeout(() => setCursor(3, false), 80);
-      } else if (shouldAutoRun()) {
-        setTimeout(() => setCursor(2, false), 80);
+      if (shouldAutoRun()) {
+        curT = TMAX;
+        tSlider.value = curT;
+        setTimeout(() => render(false), 80);
       }
     },
     onLeave() {
       leftAnimToken++;  // cancel any pending animation timers
     },
-    onNextKey() { return setCursor(cursor + 1, true); },
-    onPrevKey() {
-      if (cursor === 0) return false;
-      return setCursor(cursor - 1, false);
-    },
+    onNextKey() { return false; },
+    onPrevKey() { return false; },
   };
 };

@@ -43,9 +43,18 @@ window.scenes.scene5 = function (root) {
   const ARROW_TARGET_LEN = 0.15;    // longest arrow in plot units
   const REFRESH_EVERY    = 5;       // recompute field / loss curve every N steps
   const PLATEAU_DROP     = 0.6;     // 60% loss drop threshold
-  // Bumped from 1000 → 1500 because at 1000 steps the reverse process in
-  // scene 6 didn't yet produce a clean M. 1500 ≈ the empirical floor.
-  const MAX_STEPS_AUTO   = 1500;
+  // 3000 steps lets the MLP develop visibly M-aware structure in the vector
+  // field at low t (where the noise is small and the model has to choose
+  // among the M points). At 1500 only the high-t (centripetal) regime had
+  // converged and the field looked trivial. Scene 6 doesn't depend on this
+  // model any more (it ships pre-trained weights), so this number is purely
+  // about scene 5's pedagogical readability.
+  const MAX_STEPS_AUTO   = 3000;
+  // Default the t-slider to a *low* t when training pauses. At high t the
+  // optimal ε ≈ x_t (centripetal field, no M structure visible). At low t
+  // the model has to differentiate between the M points, which is the
+  // structure students are meant to see develop.
+  const T_SLIDER_DEFAULT = 30;
   const STEPS_TOTAL      = 4;       // cursor max+1
 
   /* ----- shared state ----------------------------------------------------- */
@@ -491,9 +500,9 @@ window.scenes.scene5 = function (root) {
     pauseTraining();
     instantiateModel();
     state.cursor = 0;
-    state.tNorm = 1.0;
-    tSlider.value = String(T - 1);
-    tValEl.textContent = String(T - 1);
+    state.tNorm = T_SLIDER_DEFAULT / (T - 1);
+    tSlider.value = String(T_SLIDER_DEFAULT);
+    tValEl.textContent = String(T_SLIDER_DEFAULT);
     tSlider.disabled = true;
     updateStatus(0, NaN);
     updateField();
@@ -540,9 +549,9 @@ window.scenes.scene5 = function (root) {
       // demote chrome — the slider stays interactive.
       if (c === 0) {
         instantiateModel();
-        state.tNorm = 1.0;
-        tSlider.value = String(T - 1);
-        tValEl.textContent = String(T - 1);
+        state.tNorm = T_SLIDER_DEFAULT / (T - 1);
+        tSlider.value = String(T_SLIDER_DEFAULT);
+        tValEl.textContent = String(T_SLIDER_DEFAULT);
         tSlider.disabled = true;
         updateStatus(0, NaN);
         updateField();
@@ -587,6 +596,11 @@ window.scenes.scene5 = function (root) {
     state.cursor = 2;
     state.cappedAuto = true;
     tSlider.disabled = false;
+    // Land the slider on the low-t default so the vector field shows the
+    // M-aware regime, not the trivial centripetal (high-t) regime.
+    state.tNorm = T_SLIDER_DEFAULT / (T - 1);
+    tSlider.value = String(T_SLIDER_DEFAULT);
+    tValEl.textContent = String(T_SLIDER_DEFAULT);
     updateStatus(state.model.step,
       state.model.lossHistory[state.model.lossHistory.length - 1]);
     updateField();
@@ -598,7 +612,7 @@ window.scenes.scene5 = function (root) {
   fullRender();
   if (shouldAutoTrain()) {
     // Schedule on next tick so DOM is mounted.
-    setTimeout(() => burstTrainFor(800), 50);
+    setTimeout(() => burstTrainFor(MAX_STEPS_AUTO), 50);
   }
 
   /* ----- onEnter / onLeave ------------------------------------------------ */
@@ -609,13 +623,13 @@ window.scenes.scene5 = function (root) {
       pauseTraining();
       instantiateModel();
       state.cursor = 0;
-      state.tNorm = 1.0;
-      tSlider.value = String(T - 1);
-      tValEl.textContent = String(T - 1);
+      state.tNorm = T_SLIDER_DEFAULT / (T - 1);
+      tSlider.value = String(T_SLIDER_DEFAULT);
+      tValEl.textContent = String(T_SLIDER_DEFAULT);
       tSlider.disabled = true;
       fullRender();
       if (shouldAutoTrain()) {
-        setTimeout(() => burstTrainFor(800), 50);
+        setTimeout(() => burstTrainFor(MAX_STEPS_AUTO), 50);
       }
     },
     onLeave() {
